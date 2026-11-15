@@ -3,7 +3,7 @@ import * as db from './db.js';
 import {
   Model, GROUPS, TASK_GROUPS, RARITIES, CATEGORIES, CATEGORY_GROUP, CATALOG_INDEX, ALL_CATALOG_NAMES,
   key, splitKey, slugify, normName, iconUrl, itemUrl, todayISO, addDays, daysBetween, shortDate, prettyDate,
-  rangeText, readInventoryCSV, toCSV,
+  rangeText, readInventoryCSV, toCSV, readBackupJSON, makeBackupJSON,
 } from './logic.js';
 import { BIN_INFO, EFFORTS, BIN_PAGES, RECIPE_BOOK } from './gamedata.js';
 
@@ -940,11 +940,15 @@ async function backupsDialog() {
     title: 'Backups', sub: 'A backup is saved automatically before every CSV import. Restoring replaces your counts and completed bins with the backup.',
     body: list.length ? list.map((b) => `<div class="req-row"><div class="grow"><b>${esc(b.label)}</b><div class="tiny muted">${new Date(b.created_at).toLocaleString()}</div></div>
       <button class="btn small" data-restore="${b.id}">Restore</button></div>`).join('') : '<div class="muted small">No backups yet.</div>',
-    foot: '<button class="btn" data-x="close">Close</button><button class="btn primary" data-x="now">Back up now</button>',
+    foot: `<span class="left"><button class="linkish small" data-x="file-in">Import backup file…</button> &nbsp;·&nbsp;
+      <button class="linkish small" data-x="file-out">Download backup file</button></span>
+      <button class="btn" data-x="close">Close</button><button class="btn primary" data-x="now">Back up now</button>`,
   });
   m.el.addEventListener('click', async (e) => {
     const x = e.target.closest('[data-x]'), r = e.target.closest('[data-restore]');
     if (x?.dataset.x === 'close') m.close();
+    if (x?.dataset.x === 'file-out') downloadBackup();
+    if (x?.dataset.x === 'file-in') { m.close(); const f = $('#backup-file'); f.value = ''; f.click(); }
     if (x?.dataset.x === 'now') {
       try { await db.makeBackup('Manual backup'); m.close(); toast('Backup saved'); } catch (err) { infoBox('Backup failed', err.message); }
     }
@@ -958,6 +962,39 @@ async function backupsDialog() {
     }
   });
 }
+
+function downloadBackup() {
+  const blob = new Blob([makeBackupJSON(S.model)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `loftia_backup_${todayISO()}.json`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  toast('Backup file downloaded');
+}
+document.getElementById('backup-file').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  let b;
+  try { b = readBackupJSON(await file.text()); } catch (err) { await infoBox('Couldn\u2019t import that file', `${err.message}\n\nNothing was changed.`); return; }
+  const items = Object.values(b.inventory).filter((v) => v > 0).length;
+  const bins = new Set(b.completions.map((c) => `${c.day}|${c.bin}`)).size;
+  const when = b.savedAt ? new Date(b.savedAt).toLocaleString() : 'an unknown date';
+  const ok = await confirmBox('Restore from this backup file?',
+    `${file.name}\nSaved ${when}\n\n\u2022 ${plural(items, 'item')} with a count\n\u2022 ${plural(bins, 'completed bin')}\n\n`
+    + 'Your current counts and completed bins will be replaced with the backup. A backup of how things are now is saved first, so you can undo this from Backups.', 'Restore');
+  if (!ok) return;
+  try {
+    await db.makeBackup('Before importing a backup file');
+    const id = await db.addBackup(`Imported file: ${file.name}`, { inventory: b.inventory, completions: b.completions });
+    await db.restoreBackup(id);
+    await reloadAll(); S._dbCache = null; render();
+    toast(`Backup restored \u2013 ${plural(items, 'item')}, ${plural(bins, 'completed bin')}`);
+  } catch (err) {
+    await infoBox('Import failed', `${err.message}\n\nIf your counts look wrong, open Backups and restore \u201cBefore importing a backup file\u201d.`);
+    await reloadAll(); render();
+  }
+});
 
 // ───────── sign-in & setup screens ─────────
 function signInScreen() {

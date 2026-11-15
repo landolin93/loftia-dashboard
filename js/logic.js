@@ -440,3 +440,38 @@ export function closeMatches(word, choices, n = 4, cutoff = 0.6) {
   return choices.map((c) => [ratio(word, c), c]).filter(([r]) => r >= cutoff)
     .sort((x, y) => y[0] - x[0]).slice(0, n).map(([, c]) => c);
 }
+
+// ── backup files (.json) - same format as the desktop app's Backup button ──
+/** text -> {inventory: {item_key: have}, completions: [{day, bin, item_key, removed, requested}], savedAt} */
+export function readBackupJSON(text) {
+  let data;
+  try { data = JSON.parse(text.replace(/^\uFEFF/, '')); } catch { throw new Error('This isn\u2019t a backup file \u2013 it couldn\u2019t be read as JSON.'); }
+  if (!data || typeof data.inventory !== 'object' || Array.isArray(data.inventory)) {
+    throw new Error('This file doesn\u2019t look like a Loftia backup (no inventory found).');
+  }
+  const inventory = {};
+  for (const [k, v] of Object.entries(data.inventory)) {
+    const n = Number(v);
+    if (k.includes('||') && Number.isInteger(n) && n >= 0) inventory[k] = n;
+  }
+  const completions = [];
+  for (const c of Array.isArray(data.completions) ? data.completions : []) {
+    const row = Array.isArray(c) ? { day: c[0], bin: c[1], item_key: c[2], removed: c[3], requested: c[4] } : c;
+    if (row && typeof row.day === 'string' && typeof row.bin === 'string' && typeof row.item_key === 'string'
+        && Number.isInteger(Number(row.removed)) && Number.isInteger(Number(row.requested))) {
+      completions.push({ day: row.day, bin: row.bin, item_key: row.item_key, removed: Number(row.removed), requested: Number(row.requested) });
+    }
+  }
+  if (!Object.keys(inventory).length && !completions.length) throw new Error('The backup file is empty.');
+  return { inventory, completions, savedAt: data.saved_at || null };
+}
+
+/** Model state -> backup file text the desktop app can restore too */
+export function makeBackupJSON(model) {
+  const inventory = {};
+  for (const [k, v] of model.have) if (v > 0) inventory[k] = v;
+  return JSON.stringify({
+    version: 2, source: 'loftia-web', saved_at: new Date().toISOString().slice(0, 19), inventory,
+    completions: (model.completions || []).map((c) => [c.day, c.bin, c.item_key, c.removed, c.requested]),
+  }, null, 2);
+}

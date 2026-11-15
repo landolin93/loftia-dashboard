@@ -43,6 +43,9 @@ export async function makeBackup(label) { return check(await sb.rpc('make_backup
 export async function listBackups() {
   return check(await sb.from('backups').select('id, created_at, label').order('created_at', { ascending: false }).limit(30));
 }
+export async function addBackup(label, data) {
+  return check(await sb.from('backups').insert({ label, data }).select('id').single()).id;
+}
 export async function restoreBackup(id) { check(await sb.rpc('restore_backup', { p_id: id })); }
 
 // ── Update requests (runs the server function that reads loftiacodex.com) ──
