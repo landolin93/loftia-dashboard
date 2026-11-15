@@ -10,7 +10,11 @@ export const CATEGORIES = Object.keys(CATALOG);
 export const CATEGORY_GROUP = {
   Materials: 'Cooking Ingredients', Crops: 'Cooking Ingredients', Flowers: 'Cooking Ingredients',
   Foods: 'Global Village', Fishes: 'Floating Village', Artifacts: 'Museum', Other: 'Cooking Ingredients',
+  Fragments: 'Wardrobe', Clothing: 'Wardrobe',
 };
+export const ADD_TABS = ['Materials', 'Crops', 'Foods', 'Fishes', 'Artifacts', 'Fragments', 'Clothing'];
+export const TAB_LABEL = { Materials: 'Materials', Crops: 'Crops', Foods: 'Food', Fishes: 'Fish', Artifacts: 'Artifacts', Fragments: 'Fragments', Clothing: 'Clothing', Flowers: 'Crops' };
+const SLUG_OVERRIDE = new Map();   // names whose codex address isn't the plain slug (e.g. "Party Hat" -> party-hat-3)
 export const GROUP_CATEGORY = { 'Floating Village': 'Fishes', Museum: 'Artifacts', 'Global Village': 'Foods' };
 const BIN_ORDER = Object.fromEntries(BIN_PAGES.map((b, i) => [b[2], i]));
 
@@ -26,8 +30,9 @@ export function normName(name) {
   return String(name).toLowerCase().replace(/\u2019/g, "'").replace(/'/g, '').replace(/&/g, ' and ')
     .replace(/[^a-z0-9]+/g, ' ').trim().replace(/\s+/g, ' ');
 }
-export const iconUrl = (name) => `https://loftiacodex.com/icons/${slugify(name)}.webp`;
-export const itemUrl = (name) => `https://loftiacodex.com/items/${slugify(name)}/`;
+export const slugOf = (name) => SLUG_OVERRIDE.get(name) || slugify(name);
+export const iconUrl = (name) => `https://loftiacodex.com/icons/${slugOf(name)}.webp`;
+export const itemUrl = (name) => `https://loftiacodex.com/items/${slugOf(name)}/`;
 
 export const CATALOG_INDEX = new Map(); // norm name -> [name, category]
 for (const [cat, names] of Object.entries(CATALOG)) {
@@ -56,7 +61,9 @@ export function rangeText(a, b) {
 
 /** The working model: item list built from the bin requests, plus your counts. */
 export class Model {
-  constructor(data) {
+  constructor(data, itemsData = null) {
+    this.itemsData = itemsData || { catalog: [], details: {} };
+    this._buildCatalog();
     this.data = data || { schedule: [] };
     this.schedule = (this.data.schedule || []).slice();
     this.info = this.data.item_info || {};
@@ -105,6 +112,85 @@ export class Model {
       if (!this.recipeMap.has(r.dish)) this.recipeMap.set(r.dish, []);
       this.recipeMap.get(r.dish).push(r);
     }
+  }
+
+  /** Item list per category (codex list from "Refresh item data" when available) + recipes, pieces, recycling. */
+  _buildCatalog() {
+    const cat = {};
+    for (const c of Object.keys(CATALOG)) cat[c] = [...CATALOG[c]];
+    const fetched = this.itemsData.catalog || [];
+    if (fetched.length) {
+      for (const c of new Set(fetched.map((i) => i.category))) cat[c] = [];
+      for (const i of fetched) {
+        if (!cat[i.category].includes(i.name)) cat[i.category].push(i.name);
+        if (i.slug !== slugify(i.name)) SLUG_OVERRIDE.set(i.name, i.slug);
+      }
+    }
+    this.catalog = cat;
+    this.sub = new Map(fetched.map((i) => [i.name, i.sub]));
+    this.index = new Map();
+    for (const [c, names] of Object.entries(cat)) for (const n of names) if (!this.index.has(normName(n))) this.index.set(normName(n), [n, c]);
+    this.allNames = [...this.index.values()].map((v) => v[0]).sort((a, b) => a.localeCompare(b));
+    const details = this.itemsData.details || {};
+    this.detailsBySlug = details;
+    this.pieceOf = new Map();       // piece name -> {clothing, qty}
+    this.piecesFor = new Map();     // clothing name -> {piece, qty}
+    for (const [c, names] of Object.entries(cat)) {
+      if (c !== 'Clothing') continue;
+      for (const n of names) {
+        const p = (details[slugOf(n)] || {}).pieces;
+        if (p && p.qty > 0) { this.piecesFor.set(n, { piece: p.name, qty: p.qty }); this.pieceOf.set(p.name, { clothing: n, qty: p.qty }); }
+      }
+    }
+  }
+  categoryOf(name) { return (this.index.get(normName(name)) || CATALOG_INDEX.get(normName(name)) || ['', 'Other'])[1]; }
+  details(name) { return this.detailsBySlug[slugOf(name)] || {}; }
+
+  /** Ways to make an item: [{station, level, inputs:[{name, qty}], out}] - cooking from the recipe book, the rest from the codex. */
+  recipesFor(name) {
+    if (RECIPE_BOOK[name]) {
+      return [{ station: 'Cooking Station', level: STATION_LEVEL[name] || null, out: 1, inputs: RECIPE_BOOK[name].map(([n, q]) => ({ name: n, qty: q })) }];
+    }
+    return (this.details(name).craft || []).map((r) => ({ ...r, inputs: r.inputs.map((x) => ({ name: x.name, qty: x.qty })) }));
+  }
+  recycleFor(name) { return (this.details(name).recycle || []).map((x) => ({ name: x.name, qty: x.qty })); }
+  maxMake(name, idx = 0) {
+    const r = this.recipesFor(name)[idx];
+    if (!r || !r.inputs.length) return 0;
+    return Math.min(...r.inputs.map((x) => Math.floor(this.get(this.keyForName(x.name)) / Math.max(1, x.qty))));
+  }
+  /** Changes for making n batches: [{item_key, have}] (or null if you can't) */
+  makePlan(name, n, idx = 0) {
+    const r = this.recipesFor(name)[idx];
+    if (!r || n <= 0 || n > this.maxMake(name, idx)) return null;
+    const delta = new Map();
+    for (const x of r.inputs) { const k = this.keyForName(x.name); delta.set(k, (delta.get(k) || 0) - x.qty * n); }
+    const k = this.keyForName(name);
+    delta.set(k, (delta.get(k) || 0) + (r.out || 1) * n);
+    return [...delta].map(([item_key, d]) => ({ item_key, have: this.get(item_key) + d }));
+  }
+  recyclePlan(name, n) {
+    const outs = this.recycleFor(name), k = this.keyForName(name);
+    if (!outs.length || n <= 0 || n > this.get(k)) return null;
+    const delta = new Map([[k, -n]]);
+    for (const x of outs) { const ok = this.keyForName(x.name); delta.set(ok, (delta.get(ok) || 0) + x.qty * n); }
+    return [...delta].map(([item_key, d]) => ({ item_key, have: this.get(item_key) + d }));
+  }
+  /** After counts change: any clothing whose pieces are all collected is completed and the pieces are used up.
+   *  Returns extra changes [{item_key, have}] and messages. Works on a proposed Map(item_key -> have). */
+  completeClothing(proposed) {
+    const extra = new Map(), done = [];
+    for (const [k, have] of proposed) {
+      const [g, name] = splitKey(k);
+      const p = this.pieceOf.get(name);
+      if (g !== 'Wardrobe' || !p || have < p.qty) continue;
+      const sets = Math.floor(have / p.qty);
+      const ck = this.keyForName(p.clothing);
+      extra.set(k, have - sets * p.qty);
+      extra.set(ck, (proposed.get(ck) ?? extra.get(ck) ?? this.get(ck)) + sets);
+      done.push(`${p.clothing} completed – ${sets * p.qty} pieces used`);
+    }
+    return { changes: [...extra].map(([item_key, h]) => ({ item_key, have: h })), messages: done };
   }
 
   setState({ inventory = [], completions = [] } = {}) {
@@ -288,24 +374,24 @@ export class Model {
 
   // ── item database (My Items) and CSV import ──
   keyForName(name, category = '') {
-    const hit = CATALOG_INDEX.get(normName(name));
+    const hit = this.index.get(normName(name)) || CATALOG_INDEX.get(normName(name));
     if (hit) [name, category] = hit;
     const k = this.itemByNorm.get(normName(name));
     if (k) return k;
     if (GROUPS.includes(category)) return key(category, name);
     const cat = category ? category.trim().replace(/^\w/, (c) => c.toUpperCase()) : 'Other';
-    const alias = { Fish: 'Fishes', Food: 'Foods', Artifact: 'Artifacts', Material: 'Materials', Crop: 'Crops' };
+    const alias = { Fish: 'Fishes', Food: 'Foods', Artifact: 'Artifacts', Material: 'Materials', Crop: 'Crops', Fragment: 'Fragments', 'Item Fragments': 'Fragments', Hats: 'Clothing', Tops: 'Clothing', Bottoms: 'Clothing', Shoes: 'Clothing', Accessories: 'Clothing' };
     return key(CATEGORY_GROUP[alias[cat] || cat] || 'Cooking Ingredients', name);
   }
 
   database() {
     const rows = [], seen = new Set();
-    for (const cat of CATEGORIES) {
-      for (const name of CATALOG[cat]) {
+    for (const cat of Object.keys(this.catalog)) {
+      for (const name of this.catalog[cat]) {
         const k = this.keyForName(name, cat);
         if (seen.has(k)) continue;
         seen.add(k);
-        rows.push({ key: k, name, category: cat, search: normName(`${name} ${cat}`) });
+        rows.push({ key: k, name, category: cat, sub: this.sub.get(name) || '', search: normName(`${name} ${cat} ${this.sub.get(name) || ''}`) });
       }
     }
     const extra = new Set([...this.have.keys(), ...this.byKey.keys()]);
@@ -314,8 +400,8 @@ export class Model {
       if (!this.byKey.has(k) && this.get(k) <= 0) continue;
       seen.add(k);
       const [g, name] = splitKey(k);
-      const cat = GROUP_CATEGORY[g] || 'Other';
-      rows.push({ key: k, name, category: cat, search: normName(`${name} ${cat}`) });
+      const cat = GROUP_CATEGORY[g] || (g === 'Wardrobe' ? (/\(piece\)$/i.test(name) ? 'Fragments' : 'Clothing') : 'Other');
+      rows.push({ key: k, name, category: cat, sub: '', search: normName(`${name} ${cat}`) });
     }
     return rows;
   }
@@ -324,20 +410,20 @@ export class Model {
   resolveImport(rows) {
     const tracked = new Map(this.items.map((i) => [normName(i.name), i.name]));
     const resolved = [], unclear = [];
-    const catalogKeys = [...CATALOG_INDEX.keys()];
+    const catalogKeys = [...this.index.keys()];
     for (const r of rows) {
       const n = normName(r.name);
-      const hit = CATALOG_INDEX.get(n);
+      const hit = this.index.get(n);
       const exact = hit ? hit[0] : tracked.get(n);
       if (exact && !r.confirm) { resolved.push([exact, r.category || (hit ? hit[1] : ''), r.qty]); continue; }
       const cands = exact ? [exact] : [];
       for (const a of r.alternatives || []) {
-        const h = CATALOG_INDEX.get(normName(a));
+        const h = this.index.get(normName(a));
         if (h && !cands.includes(h[0])) cands.push(h[0]);
       }
       if (cands.length < 4) {
         for (const m of closeMatches(n, catalogKeys, 4, 0.6)) {
-          const nm = CATALOG_INDEX.get(m)[0];
+          const nm = this.index.get(m)[0];
           if (!cands.includes(nm)) cands.push(nm);
         }
       }

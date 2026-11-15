@@ -1,11 +1,11 @@
-// Loftia Dashboard - website. Screens, dialogs and actions.
+// Loftia Dashboard - website. Screens, pop-ups and actions.
 import * as db from './db.js';
 import {
-  Model, GROUPS, TASK_GROUPS, RARITIES, CATEGORIES, CATEGORY_GROUP, CATALOG_INDEX, ALL_CATALOG_NAMES,
-  key, splitKey, slugify, normName, iconUrl, itemUrl, todayISO, addDays, daysBetween, shortDate, prettyDate,
+  Model, GROUPS, TASK_GROUPS, RARITIES, CATEGORY_GROUP, ADD_TABS, TAB_LABEL,
+  key, splitKey, normName, iconUrl, itemUrl, todayISO, addDays, daysBetween, shortDate, prettyDate,
   rangeText, readInventoryCSV, toCSV, readBackupJSON, makeBackupJSON,
 } from './logic.js';
-import { BIN_INFO, EFFORTS, BIN_PAGES, RECIPE_BOOK } from './gamedata.js';
+import { BIN_INFO, EFFORTS, RECIPE_BOOK } from './gamedata.js';
 
 // ───────── small helpers ─────────
 const root = document.getElementById('root');
@@ -19,30 +19,29 @@ const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = se
 const GROUP_COLORS = {
   'Floating Village': ['var(--blue)', 'var(--blue-soft)'], 'Global Village': ['var(--orange-dk)', 'var(--orange-soft)'],
   Museum: ['var(--lav)', 'var(--lav-soft)'], 'Cooking Ingredients': ['var(--green)', 'var(--green-soft)'],
+  Wardrobe: ['var(--berry)', 'var(--berry-soft)'],
 };
-const CAT_TAG = { Materials: '', Crops: 'green', Foods: 'orange', Fishes: 'blue', Flowers: 'berry', Artifacts: 'lav', Other: '' };
+const CAT_TAG = { Materials: '', Crops: 'green', Foods: 'orange', Fishes: 'blue', Flowers: 'berry', Artifacts: 'lav', Fragments: 'berry', Clothing: 'berry', Other: '' };
 const RARITY_TAG = { Common: '', Uncommon: 'green', Rare: 'blue', 'Very rare': 'lav', Epic: 'lav', Legendary: 'orange' };
 const RARITY_STARS = { Uncommon: ['\u2605', '#5BC8D8'], Rare: ['\u2605\u2605', '#5BC8D8'], 'Very rare': ['\u2605\u2605', '#F2B632'], Epic: ['\u2605\u2605', '#F2B632'], Legendary: ['\u2605\u2605\u2605', '#F2B632'] };
-const NAV = [
-  ['Overview', ['Dashboard', 'My Items', 'Shopping List', 'All Items']],
-  ['Villages', [...GROUPS]],
-  ['Planning', ['Task List', 'Contribution Bins', 'Daily Schedule', 'Recipes']],
-];
-const NAV_ICONS = {
-  Dashboard: 'Spotless Game Guy', 'My Items': 'Gears', 'Shopping List': 'Golden Chest Key', 'All Items': 'Used Rubber Duck',
-  'Floating Village': 'Rainbow Trout', 'Global Village': 'Potato Soup', Museum: 'Used Boombox', 'Cooking Ingredients': 'Carrot',
-  'Task List': "Used Gone Fishin'", 'Contribution Bins': 'Carrot Cake', 'Daily Schedule': 'Fried Eggs', Recipes: 'Cooking Station',
+const TABS = [['Home', 'Spotless Game Guy'], ['Items', 'Gears'], ['Tasks', "Used Gone Fishin'"], ['Bins', 'Carrot Cake'], ['More', 'Used Rubber Duck']];
+const MORE_PAGES = ['Shopping List', 'Floating Village', 'Global Village', 'Museum', 'Cooking Ingredients', 'All Items', 'Daily Schedule', 'Recipes'];
+const PAGE_ICONS = {
+  'Shopping List': 'Golden Chest Key', 'All Items': 'Used Rubber Duck', 'Floating Village': 'Rainbow Trout', 'Global Village': 'Potato Soup',
+  Museum: 'Used Boombox', 'Cooking Ingredients': 'Carrot', 'Daily Schedule': 'Fried Eggs', Recipes: 'Cooking Station',
 };
+const TITLES = { Home: 'Dashboard', Items: 'My items', Tasks: 'Task list', Bins: 'Contribution bins', More: 'More' };
 const SUBTITLES = {
-  Dashboard: 'Your event week at a glance', 'My Items': 'Everything you own \u2013 search, filter and update any count',
+  Home: 'Your event week at a glance', Items: 'Find an item, then tap it to add, set, make or recycle',
+  Tasks: 'Where to go next for fish and artifacts, most urgent first', Bins: 'Mark a bin done to take its items out of your bag',
+  More: 'Lists, planning and settings',
   'Shopping List': 'Everything you still need to collect, cook or grow', 'All Items': 'Every item the current bins and recipes use',
   'Floating Village': 'Fish and critters for the village bins', 'Global Village': 'Dishes to cook and contribute',
   Museum: 'Toys and artifacts for the museum', 'Cooking Ingredients': 'Raw ingredients \u2013 targets follow the dishes you still need',
-  'Task List': 'Where to go next for fish and museum artifacts, most urgent first',
-  'Contribution Bins': 'What each bin wants \u2013 mark a bin done to take its items out of your bag',
-  'Daily Schedule': 'Bin requests, day by day', Recipes: 'What every dish needs',
+  'Daily Schedule': 'Bin requests, day by day', Recipes: 'What every dish needs \u2013 tap one to cook it',
 };
 const LIST_VIEWS = ['Shopping List', 'All Items', ...GROUPS];
+const OLD_VIEWS = { Dashboard: 'Home', 'My Items': 'Items', 'Task List': 'Tasks', 'Contribution Bins': 'Bins' };
 
 /** <img> for an item, with a lettered tile if the picture can't load */
 function icon(name, size = 28, group = null, cls = 'icon') {
@@ -53,32 +52,42 @@ function icon(name, size = 28, group = null, cls = 'icon') {
 document.addEventListener('error', (e) => {
   const img = e.target;
   if (img.tagName !== 'IMG' || !img.dataset.fb) return;
-  const s = document.createElement('span');
-  s.className = 'ph ' + img.className;
-  s.textContent = img.dataset.fb;
-  s.style.cssText = `${img.style.cssText};background:${img.dataset.bg};color:${img.dataset.fg};font-size:${parseInt(img.style.width) * 0.45}px`;
-  img.replaceWith(s);
+  const sp = document.createElement('span');
+  sp.className = 'ph ' + img.className;
+  sp.textContent = img.dataset.fb;
+  sp.style.cssText = `${img.style.cssText};background:${img.dataset.bg};color:${img.dataset.fg};font-size:${parseInt(img.style.width) * 0.45}px`;
+  img.replaceWith(sp);
 }, true);
 function tileIcon(name, size, group) {
   const [, bg] = GROUP_COLORS[group] || ['', '#F6EEE3'];
   return `<div class="tile-ico" style="width:${size}px;height:${size}px;background:${bg}">${icon(name, Math.round(size * 0.72), group, 'icon')}</div>`;
 }
 const groupOfCat = (cat) => CATEGORY_GROUP[cat] || null;
-const catOfName = (name) => (CATALOG_INDEX.get(normName(name)) || ['', 'Other'])[1];
+const groupOfKey = (k) => splitKey(k)[0];
+const nameOfKey = (k) => splitKey(k)[1];
+const catOfName = (name) => S.model.categoryOf(name);
+function rarityOf(name) { return S.model.itemInfo(name).rarity || S.model.details(name).rarity || ''; }
 function rarityTag(r) { return r ? `<span class="tag ${RARITY_TAG[r] || ''}">${esc(r)}</span>` : ''; }
+
+/** One in-game style tile. Tapping it opens the item pop-up. */
+function tile({ k, name = nameOfKey(k), group = groupOfKey(k), count, suffix = '', caption = name, sub = '', badge = '', badgeCls = '', dim = false, act = 'open', extra = '' }) {
+  const st = RARITY_STARS[rarityOf(name)];
+  return `<button class="inv-cell ${dim ? 'zero' : ''}" data-act="${act}" data-key="${esc(k)}" ${extra} title="${esc(name)}">
+    <span class="inv">${st ? `<span class="rar" style="color:${st[1]}">${st[0]}</span>` : ''}${badge ? `<span class="tb ${badgeCls}">${esc(badge)}</span>` : ''}
+      ${icon(name, 80, group, '')}<span class="count">${esc(count)}${suffix ? `<small>${esc(suffix)}</small>` : ''}</span></span>
+    <span class="cap">${esc(caption)}</span>${sub ? `<span class="cap2">${esc(sub)}</span>` : ''}</button>`;
+}
 
 // ───────── state ─────────
 const saved = JSON.parse(localStorage.getItem('loftia-ui') || '{}');
 const S = {
-  session: null, model: null, finds: [], updating: false, updateError: null, menu: false,
-  view: saved.view || 'Dashboard',
-  ui: Object.assign({
-    search: '', method: 'All', missingOnly: false, sort: ['name', 1], sel: {},
-    db: { search: '', owned: true, cat: 'All', sort: 'az', sel: null },
-    binDay: null, taskFilter: 'All', schedDay: 'All', hideDone: false,
-  }, saved.ui || {}),
+  session: null, model: null, finds: [], updating: false, refreshing: false, updateError: null, sheet: null,
+  view: OLD_VIEWS[saved.view] || saved.view || 'Home', back: null,
+  ui: Object.assign({ search: '', method: 'All', missingOnly: false, binDay: null, taskFilter: 'All', schedDay: 'All', hideDone: false },
+    saved.ui || {}),
 };
-S.ui.search = ''; S.ui.db.search = '';
+S.ui.items = Object.assign({ search: '', tab: 'Materials', owned: false, sort: 'az' }, S.ui.items || {});
+S.ui.search = ''; S.ui.items.search = '';
 const persist = () => localStorage.setItem('loftia-ui', JSON.stringify({ view: S.view, ui: S.ui }));
 
 // ───────── toast & dialogs ─────────
@@ -102,9 +111,9 @@ function modal({ title, sub = '', body = '', foot = '', wide = false, dismiss = 
   document.body.appendChild(ov);
   const prev = document.activeElement;
   let onClose = () => {};
-  const close = (v) => { ov.remove(); document.removeEventListener('keydown', key); prev?.focus?.(); onClose(v); };
-  const key = (e) => { if (e.key === 'Escape' && dismiss) { e.preventDefault(); close(null); } };
-  document.addEventListener('keydown', key);
+  const close = (v) => { ov.remove(); document.removeEventListener('keydown', keyh); prev?.focus?.(); onClose(v); };
+  const keyh = (e) => { if (e.key === 'Escape' && dismiss) { e.preventDefault(); close(null); } };
+  document.addEventListener('keydown', keyh);
   if (dismiss) ov.addEventListener('mousedown', (e) => { if (e.target === ov) close(null); });
   return { el: ov, close, set onClose(fn) { onClose = fn; } };
 }
@@ -120,42 +129,16 @@ function confirmBox(title, text, ok = 'OK', cancel = 'Cancel') {
   });
 }
 const infoBox = (title, text) => confirmBox(title, text, 'OK', '');
-function askAmount({ title, prompt, initial = 1, min = 0, max = null, item = null }) {
-  return new Promise((res) => {
-    const m = modal({
-      title,
-      body: `<div style="display:flex;gap:12px;align-items:center">${item ? tileIcon(item.name, 52, item.group) : ''}
-        <div style="font-weight:700">${esc(prompt)}</div></div>
-        <input class="qty-input" style="margin-top:14px" type="number" inputmode="numeric" min="${min}" ${max != null ? `max="${max}"` : ''} value="${initial}">
-        <div class="tiny muted err" style="margin-top:6px">Press Enter to save</div>`,
-      foot: '<button class="btn" data-x="no">Cancel</button><button class="btn primary" data-x="yes">Save</button>',
-    });
-    const inp = $('input', m.el);
-    const ok = () => {
-      const n = Number(inp.value);
-      if (!Number.isInteger(n) || n < min || (max != null && n > max)) {
-        const e = $('.err', m.el);
-        e.textContent = max != null ? `Enter a whole number from ${min} to ${max}.` : `Enter a whole number of ${min} or more.`;
-        e.style.color = 'var(--berry)';
-        return;
-      }
-      m.close(n);
-    };
-    m.onClose = (v) => res(v == null || v === false ? null : v);
-    m.el.addEventListener('click', (e) => { const b = e.target.closest('[data-x]'); if (!b) return; b.dataset.x === 'yes' ? ok() : m.close(null); });
-    inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); ok(); } });
-    inp.focus(); inp.select();
-  });
-}
 
-// ───────── data changes (optimistic: screen updates first, server second) ─────────
+// ───────── saving changes (screen first, server second) ─────────
 function rebuild() { S.model.recalc(todayISO()); }
 async function reloadAll() {
   const d = await db.loadAll();
   const data = d.requests || (await (await fetch('data/seed.json')).json());
-  S.model = new Model(data);
+  S.model = new Model(data, d.items);
   S.model.setState({ inventory: d.inventory, completions: d.completions });
   S.finds = d.finds;
+  S._db = null;
 }
 async function safely(fn, failMsg) {
   try { await fn(); } catch (e) {
@@ -163,55 +146,52 @@ async function safely(fn, failMsg) {
     await reloadAll(); render();
   }
 }
-/** changes: [{item_key, have}] */
+/** changes: [{item_key, have}]. Completes any clothing whose pieces are all collected. */
 async function setCounts(changes, msg) {
-  for (const c of changes) S.model.have.set(c.item_key, Math.max(0, c.have));
-  rebuild(); renderKeepScroll();
-  if (msg) toast(msg);
-  await safely(() => db.setInventory(changes.map((c) => ({ item_key: c.item_key, have: Math.max(0, c.have) }))), 'Your change couldn\u2019t be saved.');
+  const proposed = new Map(changes.map((c) => [c.item_key, Math.max(0, c.have)]));
+  const { changes: extra, messages } = S.model.completeClothing(proposed);
+  for (const c of extra) proposed.set(c.item_key, Math.max(0, c.have));
+  for (const [k, v] of proposed) S.model.have.set(k, v);
+  rebuild(); refresh();
+  const note = [msg, ...messages].filter(Boolean).join(' \u00b7 ');
+  if (note) toast(note, messages.length ? '\u2728' : '\u2713');
+  await safely(() => db.setInventory([...proposed].map(([item_key, have]) => ({ item_key, have }))), 'Your change couldn\u2019t be saved.');
 }
 
 // ───────── shell ─────────
 function render() {
   if (!db.configured) { root.innerHTML = setupScreen(); return; }
   if (!S.session) { root.innerHTML = signInScreen(); return; }
-  if (!S.model) { root.innerHTML = '<div class="loading">Loading your items…</div>'; return; }
-  root.innerHTML = `<div class="app ${S.menu ? 'menu-open' : ''}">${sidebar()}<main class="main">${topbar()}<div id="view"></div></main></div>`;
+  if (!S.model) { root.innerHTML = '<div class="loading">Loading your items\u2026</div>'; return; }
+  root.innerHTML = `<div class="app">${header()}<main class="main" id="view"></main>${tabbar()}</div>`;
   renderView();
 }
-function renderKeepScroll() {
-  const keep = { win: scrollY };
-  const tc = $('.table-card'); if (tc) keep.table = tc.scrollTop;
-  render();
-  scrollTo(0, keep.win);
-  const tc2 = $('.table-card'); if (tc2 && keep.table) tc2.scrollTop = keep.table;
+/** Re-draw the current page (and the open pop-up) without losing your place. */
+function refresh() {
+  if (!$('#view')) return render();
+  const y = scrollY;
+  $('.tabbar')?.replaceWith(htmlEl(tabbar()));
+  $('.hdr')?.replaceWith(htmlEl(header()));
+  renderView();
+  scrollTo(0, y);
+  if (S.sheet) renderSheet();
 }
-function sidebar() {
+const htmlEl = (html) => { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstElementChild; };
+function header() {
+  const secondary = !TITLES[S.view];
+  return `<header class="hdr"><div class="hdr-in">
+    ${secondary ? '<button class="btn icon-btn" data-act="back" aria-label="Back">\u2190</button>' : '<div class="logo-sm" aria-label="Loftia">Loftia</div>'}
+    <div class="hdr-t"><h1>${esc(TITLES[S.view] || S.view)}</h1><div class="sub">${esc(SUBTITLES[S.view] || '')}</div></div>
+    <button class="btn hdr-up" data-act="update" ${S.updating ? 'disabled' : ''} title="Update bin requests from loftiacodex.com">
+      <span aria-hidden="true">\u21bb</span><span class="lbl">${S.updating ? ' Checking\u2026' : ' Update requests'}</span></button></div></header>`;
+}
+function tabbar() {
   const m = S.model;
-  const shop = m.items.filter((i) => m.missing(i) > 0).length;
-  const binsLeft = m.openBins(todayISO()).length;
-  const tasks = m.buildTasks().length;
-  const badges = { 'Shopping List': shop, 'Contribution Bins': binsLeft, 'Task List': tasks };
-  const nav = NAV.map(([g, views]) => `<div class="nav-group">${g}</div>` + views.map((v) => `
-    <button class="nav-btn ${S.view === v ? 'on' : ''}" data-act="nav" data-v="${esc(v)}">${icon(NAV_ICONS[v], 24, GROUPS.includes(v) ? v : null)}
-      <span>${esc(v)}</span>${badges[v] ? `<span class="badge">${badges[v]}</span>` : ''}</button>`).join('')).join('');
-  const ds = m.dates();
-  return `<aside class="side"><div class="logo" aria-label="Loftia">Loftia</div>
-    <div class="logo-sub">Inventory &amp; shopping dashboard</div><nav>${nav}</nav>
-    <div class="side-foot"><div class="row"><span class="dot"></span><b>Saved to your account</b></div>
-      <div class="muted">${ds.length ? `Requests ${rangeText(ds[0], ds[ds.length - 1])}` : 'No requests loaded'}</div>
-      <div class="muted tiny" style="margin-top:6px">${esc(updatedText())}</div>
-      <div class="muted tiny" style="margin-top:8px">${esc(S.session.user.email || '')} \u00b7 <button class="linkish tiny" data-act="signout">Sign out</button> \u00b7 <button class="linkish tiny" data-act="password">Change password</button></div>
-      <div class="muted tiny" style="margin-top:4px">Item art from loftiacodex.com</div></div></aside>`;
-}
-function topbar() {
-  return `<div class="topbar"><button class="btn menu-btn" data-act="menu" aria-label="Menu">\u2630</button>
-    <div><h1>${esc(S.view)}</h1><div class="sub">${esc(SUBTITLES[S.view] || '')}</div></div>
-    <div class="actions">
-      <button class="btn" data-act="update" ${S.updating ? 'disabled' : ''}>${S.updating ? 'Checking loftiacodex.com\u2026' : '\u21bb Update requests'}</button>
-      <button class="btn" data-act="import">Import CSV</button>
-      <button class="btn" data-act="backups">Backups</button>
-      <button class="btn primary" data-act="export">Export CSV</button></div></div>`;
+  const badges = { Tasks: m.buildTasks().length, Bins: m.openBins(todayISO()).length };
+  const active = TITLES[S.view] ? S.view : 'More';
+  return `<nav class="tabbar" aria-label="Main"><div class="tabbar-in">${TABS.map(([t, ic]) => `
+    <button class="tab ${active === t ? 'on' : ''}" data-act="tab" data-v="${t}" ${active === t ? 'aria-current="page"' : ''}>
+      <span class="ti">${icon(ic, 28, null, '')}${badges[t] ? `<span class="badge">${badges[t]}</span>` : ''}</span><span>${t === 'Home' ? 'Home' : t}</span></button>`).join('')}</div></nav>`;
 }
 function updatedText() {
   if (S.updating) return 'Checking loftiacodex.com for new requests\u2026';
@@ -220,166 +200,202 @@ function updatedText() {
   if (!at) return 'Using the built-in list \u2013 press Update requests';
   const d = new Date(at), t = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
   const day = todayISO(d), today = todayISO();
-  if (day === today) return `Updated today at ${t}`;
-  if (day === addDays(today, -1)) return `Updated yesterday at ${t}`;
-  return `Updated ${shortDate(day)}`;
+  if (day === today) return `Requests updated today at ${t}`;
+  if (day === addDays(today, -1)) return `Requests updated yesterday at ${t}`;
+  return `Requests updated ${shortDate(day)}`;
 }
 function renderView() {
-  const v = $('#view');
-  const views = {
-    Dashboard: viewDashboard, 'My Items': viewMyItems, 'Task List': viewTasks, 'Contribution Bins': viewBins,
-    'Daily Schedule': viewSchedule, Recipes: viewRecipes,
-  };
-  v.innerHTML = (views[S.view] || viewList)();
-  if (S.view === 'My Items') fillMyItems();
+  const views = { Home: viewHome, Items: viewItems, Tasks: viewTasks, Bins: viewBins, More: viewMore, 'Daily Schedule': viewSchedule, Recipes: viewRecipes };
+  $('#view').innerHTML = (views[S.view] || viewList)();
+  if (S.view === 'Items') fillItems();
   if (LIST_VIEWS.includes(S.view)) fillList();
 }
+function go(v) { S.view = v; S.ui.search = ''; persist(); render(); scrollTo(0, 0); }
 
-// ───────── Dashboard ─────────
-function eventInfo() {
-  const ds = S.model.dates();
-  return ds.length ? { range: rangeText(ds[0], ds[ds.length - 1]) } : { range: 'No requests yet' };
-}
+// ───────── Home ─────────
 function nextBinDay() {
   const ds = S.model.dates(), t = todayISO();
   if (!ds.length) return [null, []];
   const nd = ds.find((d) => d >= t) || ds[ds.length - 1];
   return [nd, S.model.schedule.filter((r) => r.date === nd)];
 }
-function viewDashboard() {
+function requestTile(r) {
+  const m = S.model, k = key(r.group, r.name);
+  if (m.binDone(r.date, r.bin)) return tile({ k, count: `\u00d7${r.quantity}`, badge: '\u2713 Delivered', badgeCls: 'muted', sub: r.bin, dim: true });
+  const [c] = m.binCover(r.date, r.bin, k);
+  const ok = c >= r.quantity;
+  return tile({ k, count: `\u00d7${r.quantity}`, badge: ok ? '\u2713 Ready' : `${c}/${r.quantity}`, badgeCls: ok ? 'green' : 'orange', sub: r.bin });
+}
+function viewHome() {
   const m = S.model;
   const need = m.items.reduce((t, i) => t + m.required(i), 0), miss = m.items.reduce((t, i) => t + m.missing(i), 0);
   const pct = need ? Math.round((100 * (need - miss)) / need) : 100;
+  const ds = m.dates();
   const contrib = m.items.filter((i) => i.group !== 'Cooking Ingredients'), raw = m.items.filter((i) => i.group === 'Cooking Ingredients');
   const done = m.items.filter((i) => m.missing(i) === 0).length;
   const stats = [
-    ['Contribution units left', contrib.reduce((t, i) => t + m.missing(i), 0), 'fish, dishes and artifacts', 'var(--orange-dk)'],
-    ['Raw ingredients left', raw.reduce((t, i) => t + m.missing(i), 0), 'to grow, gather or buy', 'var(--green)'],
-    ['Items complete', done, `of ${m.items.length} item types`, 'var(--blue)'],
-    ['Items still missing', m.items.length - done, 'on your shopping list', 'var(--berry)'],
+    ['Contribution units left', contrib.reduce((t, i) => t + m.missing(i), 0), 'fish, dishes and artifacts', 'var(--orange-dk)', 'Shopping List'],
+    ['Raw ingredients left', raw.reduce((t, i) => t + m.missing(i), 0), 'to grow, gather or buy', 'var(--green)', 'Cooking Ingredients'],
+    ['Items complete', done, `of ${m.items.length} item types`, 'var(--blue)', 'All Items'],
+    ['Items still missing', m.items.length - done, 'on your shopping list', 'var(--berry)', 'Shopping List'],
   ];
   const villages = GROUPS.map((g) => {
     const arr = m.items.filter((i) => i.group === g);
     const n = arr.reduce((t, i) => t + m.required(i), 0), ms = arr.reduce((t, i) => t + m.missing(i), 0);
     const p = n ? Math.round((100 * (n - ms)) / n) : 100;
     const [fg] = GROUP_COLORS[g];
-    return `<div class="village" data-act="nav" data-v="${esc(g)}">${tileIcon(NAV_ICONS[g], 46, g)}
-      <div><div class="vname">${esc(g)}</div><div class="bar" style="margin-top:6px"><i style="width:${p}%;background:${fg}"></i></div>
-      <div class="small muted" style="margin-top:4px">${ms ? `${fmt(ms)} still needed \u00b7 ${arr.length} items` : 'All done!'}</div></div>
-      <b style="color:${fg}">${p}%</b></div>`;
+    return `<button class="village" data-act="go" data-v="${esc(g)}">${tileIcon(PAGE_ICONS[g], 46, g)}
+      <span><span class="vname">${esc(g)}</span><span class="bar" style="margin-top:6px"><i style="width:${p}%;background:${fg}"></i></span>
+      <span class="small muted">${ms ? `${fmt(ms)} still needed` : 'All done!'}</span></span><b style="color:${fg}">${p}%</b></button>`;
   }).join('');
   const [nd, entries] = nextBinDay();
-  const reqs = entries.slice(0, 7).map((r) => {
-    const k = key(r.group, r.name);
-    let tag;
-    if (m.binDone(r.date, r.bin)) tag = '<span class="tag">\u2713 Delivered</span>';
-    else { const [c] = m.binCover(r.date, r.bin, k); tag = `<span class="tag ${c >= r.quantity ? 'green' : 'orange'}">${c >= r.quantity ? '\u2713 ' : ''}${c}/${r.quantity}</span>`; }
-    return `<div class="req-row">${icon(r.name, 30, r.group)}<div class="grow"><b>${esc(r.name)}</b><div class="tiny muted">${esc(r.bin)}</div></div>${tag}</div>`;
-  }).join('');
-  const tasks = m.buildTasks();
-  const t = tasks[0];
-  return `<section class="hero"><div><div style="font-weight:700;opacity:.9">Upcoming bin requests</div>
-      <div class="when">${esc(eventInfo().range)}</div><div style="font-weight:700">${esc(updatedText())}</div></div>
-      <div class="pct"><b>${pct}%</b><div style="font-weight:700;opacity:.9">overall complete</div><div class="bar"><i style="width:${pct}%"></i></div></div></section>
-    <div class="stats">${stats.map(([l, v, s, c]) => `<div class="card stat"${l === 'Items still missing' ? ' data-act="nav" data-v="Shopping List" style="cursor:pointer"' : ''}>
-      <div class="small muted"><span class="dot" style="background:${c}"></span> ${esc(l)}</div><b style="color:${c}">${fmt(v)}</b><div class="small muted">${esc(s)}</div></div>`).join('')}</div>
-    <div class="dash-grid"><div class="card"><h3 class="cardtitle">Progress by village</h3><div class="small muted">Open a village to see its list</div>${villages}</div>
-      <div class="card"><h3 class="cardtitle">Next bin requests</h3><div class="small muted" style="margin-bottom:8px">${nd ? prettyDate(nd) : 'No schedule'}</div>
-        ${reqs || '<div class="muted small">Nothing requested.</div>'}
-        ${entries.length > 7 ? `<div class="small muted">+ ${entries.length - 7} more requests</div>` : ''}
-        <button class="btn" style="margin-top:12px" data-act="open-bins" data-d="${nd || ''}">Open contribution bins</button></div></div>
-    <div class="card" style="margin-top:16px"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
-      <h3 class="cardtitle">Next task</h3>${t ? dueTag(t.deadline) : ''}<button class="btn" style="margin-left:auto" data-act="nav" data-v="Task List">Open task list</button></div>
-      ${t ? `<div style="font-weight:700;margin:6px 0 10px">${esc(taskTitle(t))} \u2013 ${esc(taskSub(t))}</div>
-        <div class="chips">${t.items.slice(0, 6).map((e) => `<span class="req-row" style="padding:0 14px 0 0">${icon(e.name, 28, e.group)}<span class="${e.bonus ? 'muted' : ''}">${esc(e.name)} \u00d7${e.short}</span></span>`).join('')}
-        ${t.items.length > 6 ? `<span class="muted small">+${t.items.length - 6} more</span>` : ''}</div>
-        ${tasks.length > 1 ? `<div class="tiny muted" style="margin-top:8px">Then ${plural(tasks.length - 1, 'more stop')}.</div>` : ''}`
-      : '<div class="muted small" style="margin-top:6px">Nothing left to collect \u2013 every open bin has its fish and artifacts covered.</div>'}</div>`;
+  const tasks = m.buildTasks(), t = tasks[0];
+  return `<section class="hero"><div><div class="hero-l">Upcoming bin requests</div>
+      <div class="when">${ds.length ? rangeText(ds[0], ds[ds.length - 1]) : 'No requests yet'}</div><div class="hero-l">${esc(updatedText())}</div></div>
+      <div class="pct"><b>${pct}%</b><div class="hero-l">overall complete</div><div class="bar"><i style="width:${pct}%"></i></div></div></section>
+    <div class="stats">${stats.map(([l, v, s, c, page]) => `<button class="card stat" data-act="go" data-v="${page}">
+      <span class="small muted"><span class="dot" style="background:${c}"></span> ${esc(l)}</span><b style="color:${c}">${fmt(v)}</b><span class="small muted">${esc(s)}</span></button>`).join('')}</div>
+    <div class="card"><div class="row-h"><h3 class="cardtitle">Next bin requests</h3><span class="muted small">${nd ? prettyDate(nd) : ''}</span>
+      <button class="btn small" data-act="open-bins" data-d="${nd || ''}">Open bins</button></div>
+      <div class="inv-grid sm">${entries.map(requestTile).join('') || '<div class="muted small">Nothing requested.</div>'}</div></div>
+    <div class="card"><div class="row-h"><h3 class="cardtitle">Next task</h3>${t ? dueTag(t.deadline) : ''}<button class="btn small" data-act="tab" data-v="Tasks">Open tasks</button></div>
+      ${t ? `<div class="task-where">${esc(taskTitle(t))} \u2013 ${esc(taskSub(t))}</div><div class="inv-grid sm">${t.items.slice(0, 8).map((e) => taskTile(e)).join('')}</div>`
+      : '<div class="muted small">Nothing left to collect \u2013 every open bin has its fish and artifacts covered.</div>'}</div>
+    <div class="card"><h3 class="cardtitle">Progress by village</h3><div class="villages">${villages}</div></div>`;
 }
 
-// ───────── My Items (your item database) ─────────
-function viewMyItems() {
-  const u = S.ui.db;
-  const cats = ['All', ...CATEGORIES, 'Other'];
-  return `<div class="toolbar">
-      <label class="search"><span aria-hidden="true">\u2315</span><input id="db-search" type="search" placeholder="Search by name or category" value="${esc(u.search)}" aria-label="Search items" autocomplete="off">
-        <button class="x" data-act="db-clear" aria-label="Clear search">\u2715</button></label>
-      <div class="chips">${[['Items I have', true], ['All codex items', false]].map(([l, v]) => `<button class="chip ${u.owned === v ? 'on' : ''}" data-act="db-owned" data-v="${v}">${l}</button>`).join('')}</div>
-      <div class="chips" style="margin-left:auto"><span class="small muted">Sort</span>
-        ${[['az', 'A\u2013Z'], ['most', 'Most'], ['fewest', 'Fewest']].map(([v, l]) => `<button class="chip ${u.sort === v ? 'on' : ''}" data-act="db-sort" data-v="${v}">${l}</button>`).join('')}</div></div>
-    <div class="chips" id="db-cats" style="margin-bottom:10px">${cats.map((c) => `<button class="chip ${u.cat === c ? 'on' : ''}" data-act="db-cat" data-v="${c}">${c}<span class="n"></span></button>`).join('')}</div>
-    <p class="note" id="db-note"></p>
-    <div class="split"><div id="db-grid" class="inv-grid"></div><div id="db-panel" class="card detail"></div></div>`;
+// ───────── Items (add / find anything) ─────────
+function viewItems() {
+  const u = S.ui.items;
+  const sorts = [['az', 'A\u2013Z'], ['most', 'Most'], ['fewest', 'Fewest']];
+  return `<div class="sticky-tools">
+      <label class="search"><span aria-hidden="true">\u2315</span><input id="items-search" type="search" placeholder="Type to find an item" value="${esc(u.search)}" aria-label="Search items" autocomplete="off" enterkeyhint="search">
+        <button class="x" data-act="items-clear" aria-label="Clear search">\u2715</button></label>
+      <div class="tabs-scroll" role="tablist">${['All', ...ADD_TABS].map((c) => `<button class="chip ${u.tab === c ? 'on' : ''}" role="tab" data-act="items-tab" data-v="${c}">${esc(TAB_LABEL[c] || c)}<span class="n"></span></button>`).join('')}</div>
+      <div class="tabs-scroll"><button class="chip ${u.owned ? 'on' : ''}" data-act="items-owned">Only items I have</button>
+        <span class="sort-l small muted">Sort</span>${sorts.map(([v, l]) => `<button class="chip ${u.sort === v ? 'on' : ''}" data-act="items-sort" data-v="${v}">${l}</button>`).join('')}</div></div>
+    <p class="note" id="items-note"></p><div id="items-grid" class="inv-grid"></div>`;
 }
-function dbRows() {
-  const m = S.model, u = S.ui.db;
-  if (!S._dbCache || S._dbCache.model !== m) S._dbCache = { model: m, rows: m.database() };
-  const base = S._dbCache.rows.filter((r) => !u.owned || m.get(r.key) > 0);
+function itemRows() {
+  const m = S.model, u = S.ui.items;
+  if (!S._db || S._db.model !== m) S._db = { model: m, rows: m.database() };
+  const inTab = (r) => u.tab === 'All' || r.category === u.tab || (u.tab === 'Crops' && r.category === 'Flowers');
+  const base = S._db.rows.filter((r) => !u.owned || m.get(r.key) > 0);
   const toks = normName(u.search).split(' ').filter(Boolean);
-  let rows = base.filter((r) => (u.cat === 'All' || r.category === u.cat) && toks.every((t) => r.search.includes(t)));
+  const rows = base.filter((r) => inTab(r) && toks.every((t) => r.search.includes(t)));
   const by = { az: (a, b) => a.name.localeCompare(b.name), most: (a, b) => m.get(b.key) - m.get(a.key) || a.name.localeCompare(b.name), fewest: (a, b) => m.get(a.key) - m.get(b.key) || a.name.localeCompare(b.name) };
-  rows = rows.sort(by[u.sort] || by.az);
-  return { base, rows, toks };
-}
-function fillMyItems() {
-  const m = S.model, u = S.ui.db;
-  const { base, rows, toks } = dbRows();
+  rows.sort(by[u.sort] || by.az);
   const counts = {};
-  for (const r of base) counts[r.category] = (counts[r.category] || 0) + 1;
-  $$('#db-cats .chip').forEach((b) => { $('.n', b).textContent = b.dataset.v === 'All' ? base.length : (counts[b.dataset.v] || 0); });
-  const total = rows.reduce((t, r) => t + m.get(r.key), 0);
-  $('#db-note').textContent = rows.length
-    ? `Showing ${rows.length === base.length ? rows.length : `${rows.length} of ${base.length}`} ${u.owned ? 'items you have' : 'codex items'} \u00b7 ${fmt(total)} in total. Click an item to change its count; + and \u2212 on your keyboard adjust the selected item.`
-    : (toks.length || u.cat !== 'All' ? 'No matches \u2013 try fewer letters, another category, or \u201cAll codex items\u201d.' : 'No items yet \u2013 import a CSV, or switch to \u201cAll codex items\u201d to add counts.');
-  if (!rows.find((r) => r.key === u.sel)) u.sel = rows[0]?.key || null;
-  $('#db-grid').innerHTML = rows.map((r) => invTile(r)).join('');
-  renderDbPanel();
+  for (const r of base) if (toks.every((t) => r.search.includes(t))) { const c = r.category === 'Flowers' ? 'Crops' : r.category; counts[c] = (counts[c] || 0) + 1; counts.All = (counts.All || 0) + 1; }
+  return { rows, counts, toks };
 }
-function invTile(r) {
-  const n = S.model.get(r.key);
-  const rar = S.model.itemInfo(r.name).rarity;
-  const st = RARITY_STARS[rar];
-  return `<button class="inv-cell ${n ? '' : 'zero'}" data-act="db-sel" data-key="${esc(r.key)}" title="${esc(r.name)}" aria-label="${esc(r.name)}, ${n}">
-    <span class="inv ${S.ui.db.sel === r.key ? 'sel' : ''}">${st ? `<span class="rar" style="color:${st[1]}">${st[0]}</span>` : ''}${icon(r.name, 80, groupOfCat(r.category), '')}<span class="count">${fmt(n)}</span></span>
-    <span class="cap">${esc(r.name)}</span></button>`;
-}
-function renderDbPanel() {
-  const m = S.model, el = $('#db-panel');
-  if (!el) return;
-  const r = S._dbCache?.rows.find((x) => x.key === S.ui.db.sel);
-  if (!r) { el.innerHTML = '<div class="empty">Pick an item to see and change its count.</div>'; return; }
-  const item = m.byKey.get(r.key);
-  const info = m.itemInfo(r.name);
-  const where = [info.location, info.district].filter(Boolean).join(', ');
-  let needLine = '';
-  if (item && m.required(item)) {
-    const ms = m.missing(item);
-    needLine = `<div class="small" style="margin-top:8px;font-weight:700;color:${ms ? 'var(--orange-dk)' : 'var(--green)'}">Needed for bins and recipes: ${m.required(item)} \u00b7 ${ms ? `${ms} still missing` : 'covered \u2713'}</div>`;
+function itemTile(r) {
+  const m = S.model, n = m.get(r.key);
+  const p = m.pieceOf.get(r.name);
+  if (p) return tile({ k: r.key, name: r.name, count: fmt(n), suffix: `/${p.qty}`, dim: !n, caption: r.name.replace(/\s*\(piece\)$/i, ''), sub: 'pieces' });
+  if (r.category === 'Clothing') {
+    const pc = m.piecesFor.get(r.name);
+    const pieces = pc ? m.get(m.keyForName(pc.piece)) : 0;
+    return tile({ k: r.key, name: r.name, count: n ? '\u2713' : '', badge: !n && pieces ? `${pieces}/${pc.qty}` : '', badgeCls: 'orange', dim: !n, sub: r.sub || '' });
   }
-  el.innerHTML = `${tileIcon(r.name, 96, groupOfCat(r.category))}
-    <h3 class="cardtitle" style="margin-top:12px;font-size:22px">${esc(r.name)}</h3>
-    <div class="chips" style="margin-top:6px"><span class="tag ${CAT_TAG[r.category] || ''}">${esc(r.category)}</span>${rarityTag(info.rarity)}</div>
-    ${where ? `<div class="small muted" style="margin-top:6px">Found at ${esc(where)}</div>` : ''}${needLine}
-    <label class="small muted" style="display:block;margin:16px 0 4px" for="db-qty">Quantity</label>
-    <input id="db-qty" class="qty-input" type="number" inputmode="numeric" min="0" value="${m.get(r.key)}">
-    <div class="tiny muted" id="db-qty-msg" style="margin-top:4px">Type a number and press Enter to save</div>
-    <div class="btns" style="display:flex;gap:6px;margin-top:12px;flex-wrap:wrap">
-      ${[[-1, '\u2212 1'], [1, '+ 1'], [5, '+ 5'], [10, '+ 10']].map(([d, l]) => `<button class="btn ${d === 1 ? 'primary' : ''}" data-act="db-delta" data-d="${d}">${l}</button>`).join('')}</div>
-    <button class="btn small" style="margin-top:8px" data-act="db-save">Save typed amount</button>
-    <div style="margin-top:14px"><a class="linkish small" href="${itemUrl(r.name)}" target="_blank" rel="noopener">Open on loftiacodex.com \u2197</a></div>`;
+  const can = m.recipesFor(r.name).length ? m.maxMake(r.name) : 0;
+  return tile({ k: r.key, name: r.name, count: fmt(n), dim: !n, badge: can ? `make ${can}` : '', badgeCls: 'green' });
 }
-async function dbSet(n) {
-  const k = S.ui.db.sel;
-  if (!k) return;
-  n = Math.max(0, n);
-  S.model.have.set(k, n); rebuild();
-  const tile = $(`.inv-cell[data-key="${CSS.escape(k)}"]`);
-  if (tile) { $('.count', tile).textContent = fmt(n); tile.classList.toggle('zero', !n); }
-  renderDbPanel();
-  $('.side')?.replaceWith(htmlEl(sidebar()));
-  await safely(() => db.setInventory([{ item_key: k, have: n }]), 'Your change couldn\u2019t be saved.');
+function fillItems() {
+  const u = S.ui.items, { rows, counts, toks } = itemRows();
+  $$('[data-act="items-tab"]').forEach((b) => { $('.n', b).textContent = counts[b.dataset.v] || 0; });
+  const needsData = ['Fragments', 'Clothing'].includes(u.tab) && !S.model.catalog[u.tab]?.length;
+  $('#items-note').textContent = needsData ? '' : rows.length
+    ? `${plural(rows.length, 'item')}${u.owned ? ' you have' : ''}. Tap one to add, set, make or recycle.`
+    : (toks.length ? 'No matches \u2013 try fewer letters or another tab.' : 'Nothing here yet.');
+  $('#items-grid').innerHTML = needsData
+    ? `<div class="card empty-card"><b>${u.tab} haven\u2019t been loaded yet</b><p class="small muted">Go to More \u2192 Refresh item data. It reads the codex once to get every ${u.tab === 'Clothing' ? 'clothing item and how many pieces each needs' : 'clothing piece'}, plus crafting and recycling recipes.</p>
+        <button class="btn primary" data-act="refresh-items">Refresh item data now</button></div>`
+    : rows.map(itemTile).join('');
 }
-const htmlEl = (html) => { const t = document.createElement('template'); t.innerHTML = html.trim(); return t.content.firstChild; };
+
+// ───────── the item pop-up ─────────
+function openSheet(k, ctx = null) {
+  S.sheet = { key: k, ctx, mode: ctx === 'task' ? 'add' : (S.sheet?.mode || 'add'), makeN: 1, recN: 1 };
+  if (!$('.sheet-ov')) {
+    const ov = document.createElement('div');
+    ov.className = 'sheet-ov';
+    ov.innerHTML = '<div class="sheet" role="dialog" aria-modal="true"><div class="grab" aria-hidden="true"></div><button class="x-close" data-act="sheet-close" aria-label="Close">\u2715</button><div class="sheet-body"></div></div>';
+    ov.addEventListener('mousedown', (e) => { if (e.target === ov) closeSheet(); });
+    document.body.appendChild(ov);
+    document.body.classList.add('noscroll');
+    requestAnimationFrame(() => ov.classList.add('open'));
+  }
+  renderSheet();
+  if (matchMedia('(pointer: fine)').matches) setTimeout(() => $('#sh-qty')?.focus({ preventScroll: true }), 60);   // no surprise keyboard on phones
+}
+function closeSheet() { S.sheet = null; $('.sheet-ov')?.remove(); document.body.classList.remove('noscroll'); }
+function renderSheet() {
+  const sh = S.sheet, m = S.model, body = $('.sheet-body');
+  if (!sh || !body) return;
+  const k = sh.key, [g, name] = splitKey(k), have = m.get(k);
+  const cat = m.categoryOf(name), item = m.byKey.get(k), info = m.itemInfo(name), det = m.details(name);
+  const where = [info.location, info.district].filter(Boolean).join(', ');
+  const chips = [`<span class="tag ${CAT_TAG[cat] || ''}">${esc(TAB_LABEL[cat] || cat)}</span>`, m.sub.get(name) && m.sub.get(name) !== cat ? `<span class="tag">${esc(m.sub.get(name))}</span>` : '',
+    item ? `<span class="tag">${esc(item.method)}</span>` : '', m.station(item) ? `<span class="tag blue">Station Lv ${m.station(item)}</span>` : '',
+    rarityTag(rarityOf(name)), det.type ? `<span class="tag">${esc(det.type)}</span>` : ''].join('');
+  let need = '';
+  if (item && m.required(item)) {
+    const req = m.required(item), ms = m.missing(item), pct = Math.round((100 * Math.min(have, req)) / req);
+    need = `<div class="sec"><div class="row-h"><b class="small">Needed for bins and recipes</b><span class="small" style="color:${ms ? 'var(--orange-dk)' : 'var(--green)'};font-weight:800">${ms ? `${ms} more to go` : 'All set \u2713'}</span></div>
+      <div class="bar"><i style="width:${pct}%;background:${ms ? 'var(--orange)' : 'var(--green)'}"></i></div><div class="tiny muted" style="margin-top:4px">${have} in your bag \u00b7 ${req} needed</div></div>`;
+  }
+  let pieces = '';
+  const pOf = m.pieceOf.get(name), pFor = m.piecesFor.get(name);
+  if (pOf) pieces = `<div class="sec"><b class="small">Pieces for ${esc(pOf.clothing)}</b><div class="bar" style="margin-top:6px"><i style="width:${Math.min(100, (100 * have) / pOf.qty)}%;background:var(--berry)"></i></div>
+    <div class="tiny muted" style="margin-top:4px">${have} of ${pOf.qty}. When you reach ${pOf.qty}, ${esc(pOf.clothing)} is completed and the pieces are used up.</div></div>`;
+  else if (pFor) { const ph = m.get(m.keyForName(pFor.piece)); pieces = `<div class="sec"><b class="small">Made from ${pFor.qty} pieces</b><div class="req-row" data-act="open" data-key="${esc(m.keyForName(pFor.piece))}" style="cursor:pointer">${icon(pFor.piece, 30, 'Wardrobe')}<span class="grow">${esc(pFor.piece)}</span><b class="small">${ph}/${pFor.qty}</b></div></div>`; }
+  const isTask = sh.ctx === 'task';
+  const qty = `<div class="sec"><div class="have-big"><b>${fmt(have)}</b><span>${cat === 'Clothing' ? (have ? 'owned' : 'not owned yet') : 'in your bag'}</span></div>
+    <div class="seg" role="radiogroup">${[['add', isTask ? 'Found' : 'Add amount'], ['set', 'Set total']].map(([v, l]) => `<button role="radio" aria-checked="${sh.mode === v}" class="${sh.mode === v ? 'on' : ''}" data-act="sheet-mode" data-v="${v}">${l}</button>`).join('')}</div>
+    <div class="qty-row"><input id="sh-qty" class="qty-input" type="number" inputmode="numeric" min="0" placeholder="${sh.mode === 'add' ? 'How many?' : String(have)}" aria-label="${sh.mode === 'add' ? 'Amount to add' : 'New total'}">
+      <button class="btn primary" data-act="sheet-save">${sh.mode === 'add' ? (isTask ? 'Log find' : 'Add') : 'Save'}</button></div>
+    <div class="tiny muted" id="sh-msg">${sh.mode === 'add' ? 'Type how many you got and press Enter.' : 'Type the new total and press Enter.'}</div>
+    <div class="quick">${[[-1, '\u2212 1'], [1, '+ 1'], [5, '+ 5'], [10, '+ 10']].map(([d, l]) => `<button class="btn" data-act="sheet-delta" data-d="${d}">${l}</button>`).join('')}</div></div>`;
+  const make = m.recipesFor(name).map((r, idx) => {
+    const max = m.maxMake(name, idx), n = Math.max(1, Math.min(sh.makeN, Math.max(1, max)));
+    const missing = r.inputs.map((x) => [x, Math.max(0, x.qty * n - m.get(m.keyForName(x.name)))]).filter(([, s]) => s > 0);
+    return `<div class="sec"><div class="row-h"><b class="small">${r.station === 'Cooking Station' ? 'Cook' : 'Make'} at ${esc(r.station || 'a station')}${r.level ? ` Lv ${r.level}` : ''}</b>
+        <span class="tiny muted">makes ${r.out || 1}</span></div>
+      <div class="ing-list">${r.inputs.map((x) => { const hk = m.keyForName(x.name), h = m.get(hk); return `<button class="ing" data-act="open" data-key="${esc(hk)}">${icon(x.name, 30, groupOfCat(m.categoryOf(x.name)))}<span class="grow">${esc(x.name)}</span><span class="tiny ${h >= x.qty * n ? 'ok' : 'short'}">${h} / ${x.qty * n}</span></button>`; }).join('')}</div>
+      <div class="make-row"><div class="stepper"><button class="btn" data-act="make-n" data-d="-1" aria-label="Fewer">\u2212</button><b>${n}</b><button class="btn" data-act="make-n" data-d="1" aria-label="More">+</button></div>
+        <button class="btn primary" data-act="sheet-make" data-i="${idx}" ${max >= n ? '' : 'disabled'}>${r.station === 'Cooking Station' ? 'Cook' : 'Make'} ${n}</button></div>
+      <div class="tiny ${max ? 'ok' : 'short'}">${max ? `You can make ${max} now. Ingredients are taken out of your bag.` : `Missing ${missing.map(([x, s]) => `${s} ${x.name}`).join(', ')}`}</div></div>`;
+  }).join('');
+  const rec = m.recycleFor(name);
+  const recycle = rec.length ? `<div class="sec"><b class="small">Recycle into</b><div class="ing-list">${rec.map((x) => `<div class="ing">${icon(x.name, 30, groupOfCat(m.categoryOf(x.name)))}<span class="grow">${esc(x.name)}</span><span class="tiny">\u00d7${x.qty * sh.recN}</span></div>`).join('')}</div>
+    <div class="make-row"><div class="stepper"><button class="btn" data-act="rec-n" data-d="-1" aria-label="Fewer">\u2212</button><b>${sh.recN}</b><button class="btn" data-act="rec-n" data-d="1" aria-label="More">+</button></div>
+      <button class="btn" data-act="sheet-recycle" ${have >= sh.recN ? '' : 'disabled'}>Recycle ${sh.recN}</button></div></div>` : '';
+  let rel = '';
+  if (item && item.group === 'Cooking Ingredients') {
+    const uses = m.usesOf(name);
+    if (uses.length) rel = `<div class="sec"><b class="small">Used in</b><div class="ing-list">${uses.map((r) => { const d = m.item('Global Village', r.dish); const l = d ? m.missing(d) : 0; return `<button class="ing" data-act="open" data-key="${esc(key('Global Village', r.dish))}">${icon(r.dish, 30, 'Global Village')}<span class="grow">${esc(r.dish)}</span><span class="tiny muted">\u00d7${r.per} \u00b7 ${l ? `${l} to cook` : 'done'}</span></button>`; }).join('')}</div></div>`;
+  } else if (item) {
+    const reqs = m.requestsFor(item);
+    if (reqs.length) rel = `<div class="sec"><b class="small">Bin requests</b>${reqs.map((r) => `<div class="req-row small"><span class="grow">${shortDate(r.date)} \u00b7 ${esc(r.bin)}</span><b>\u00d7${r.quantity}${m.binDone(r.date, r.bin) ? ' \u2713' : ''}</b></div>`).join('')}</div>`;
+  }
+  body.innerHTML = `<div class="sh-head">${tileIcon(name, 84, g)}<div><h3>${esc(name)}</h3><div class="chips">${chips}</div>
+      ${where ? `<div class="tiny muted" style="margin-top:6px">Found at ${esc(where)}</div>` : ''}</div></div>
+    ${need}${pieces}${qty}${make}${recycle}${rel}
+    <div class="sec" style="border:0"><a class="linkish small" href="${itemUrl(name)}" target="_blank" rel="noopener">Open on loftiacodex.com \u2197</a></div>`;
+}
+async function sheetSave() {
+  const sh = S.sheet, inp = $('#sh-qty'), msg = $('#sh-msg');
+  const n = Number(String(inp.value).replace(/,/g, '').trim());
+  if (inp.value.trim() === '' || !Number.isInteger(n) || n < 0 || (sh.mode === 'add' && n === 0)) {
+    msg.textContent = sh.mode === 'add' ? 'Type a whole number of 1 or more.' : 'Type a whole number (0 or more).'; msg.style.color = 'var(--berry)'; inp.focus(); return;
+  }
+  const k = sh.key, name = nameOfKey(k), have = S.model.get(k);
+  if (sh.mode === 'add' && sh.ctx === 'task') return logFind(k, n);
+  if (sh.mode === 'add') await setCounts([{ item_key: k, have: have + n }], `+${fmt(n)} ${name}`);
+  else await setCounts([{ item_key: k, have: n }], `${name}: ${fmt(n)}`);
+  const i2 = $('#sh-qty'); if (i2) { i2.value = ''; if (matchMedia('(pointer: fine)').matches) i2.focus({ preventScroll: true }); else i2.blur(); }
+}
 
 // ───────── item lists (Shopping List, villages, ingredients) ─────────
 function viewList() {
@@ -388,93 +404,31 @@ function viewList() {
   if (methods.includes('Cook')) methods.splice(methods.indexOf('Cook') + 1, 0, 'Can cook');
   if (!['All', ...methods].includes(S.ui.method)) S.ui.method = 'All';
   const canCook = m.items.filter((i) => m.cookable(i) > 0).length;
-  return `<div class="toolbar">
-      <label class="search"><span aria-hidden="true">\u2315</span><input id="list-search" type="search" placeholder="Search items" value="${esc(S.ui.search)}" aria-label="Search items" autocomplete="off">
+  return `<div class="sticky-tools"><label class="search"><span aria-hidden="true">\u2315</span><input id="list-search" type="search" placeholder="Type to find an item" value="${esc(S.ui.search)}" aria-label="Search items" autocomplete="off" enterkeyhint="search">
         <button class="x" data-act="list-clear" aria-label="Clear search">\u2715</button></label>
-      <div class="chips">${['All', ...methods].map((x) => `<button class="chip ${S.ui.method === x ? 'on' : ''}" data-act="method" data-v="${x}">${x}${x === 'Can cook' ? `<span class="n">${canCook}</span>` : ''}</button>`).join('')}</div>
-      ${cat !== 'Shopping List' ? `<button class="chip ${S.ui.missingOnly ? 'on' : ''}" style="margin-left:auto" data-act="missing">Missing only</button>` : ''}</div>
-    <p class="note" id="list-note"></p><div class="split"><div class="card table-card" id="list-table"></div><div class="card detail" id="list-detail"></div></div>`;
+      <div class="tabs-scroll">${['All', ...methods].map((x) => `<button class="chip ${S.ui.method === x ? 'on' : ''}" data-act="method" data-v="${x}">${x}${x === 'Can cook' ? `<span class="n">${canCook}</span>` : ''}</button>`).join('')}
+        ${cat !== 'Shopping List' ? `<button class="chip ${S.ui.missingOnly ? 'on' : ''}" data-act="missing">Missing only</button>` : ''}</div></div>
+    <p class="note" id="list-note"></p><div class="inv-grid" id="list-grid"></div>`;
 }
-function listRows() {
+function fillList() {
   const m = S.model, cat = S.view, toks = normName(S.ui.search).split(' ').filter(Boolean);
   let rows = m.rows(cat).filter((i) => toks.every((t) => normName(`${i.name} ${i.group}`).includes(t))
     && (S.ui.method === 'All' || i.method === S.ui.method || (S.ui.method === 'Can cook' && m.cookable(i) > 0))
     && (!S.ui.missingOnly || cat === 'Shopping List' || m.missing(i) > 0));
-  const [col, dir] = S.ui.sort;
-  const val = { name: (i) => i.name.toLowerCase(), group: (i) => i.group, method: (i) => i.method, station: (i) => m.station(i) || 9, need: (i) => m.required(i), have: (i) => m.haveOf(i), missing: (i) => m.missing(i), status: (i) => m.missing(i) };
-  if (S.ui.method === 'Can cook' && col === 'name') rows.sort((a, b) => (m.station(a) || 9) - (m.station(b) || 9) || a.name.localeCompare(b.name));
-  else rows.sort((a, b) => { const x = val[col](a), y = val[col](b); return (x < y ? -1 : x > y ? 1 : a.name.localeCompare(b.name)) * dir; });
-  return rows;
-}
-function fillList() {
-  const m = S.model, cat = S.view, rows = listRows();
-  const showGroup = cat === 'Shopping List' || cat === 'All Items';
-  const showStation = cat === 'Global Village' || S.ui.method === 'Can cook' || (showGroup && S.ui.method === 'Cook');
-  const cols = [['name', 'Item'], ...(showGroup ? [['group', 'Village']] : []), ['method', 'Source'], ...(showStation ? [['station', 'Station']] : []),
-    ['need', 'Need', 'num'], ['have', 'Have', 'num'], ['missing', 'Missing', 'num'], ['status', 'Status']];
-  const sel = S.ui.sel[cat];
-  if (!rows.find((i) => key(i.group, i.name) === sel)) S.ui.sel[cat] = rows[0] ? key(rows[0].group, rows[0].name) : null;
+  if (S.ui.method === 'Can cook') rows.sort((a, b) => (m.station(a) || 9) - (m.station(b) || 9) || a.name.localeCompare(b.name));
+  else rows.sort((a, b) => (m.missing(b) > 0) - (m.missing(a) > 0) || a.name.localeCompare(b.name));
   const left = rows.reduce((t, i) => t + m.missing(i), 0);
   $('#list-note').textContent = S.ui.method === 'Can cook' && !rows.length
     ? 'Nothing to cook yet \u2013 you\u2019re missing at least one raw ingredient for every dish.'
-    : `${plural(rows.length, 'item')} \u00b7 ${fmt(left)} still needed \u00b7 Click a row for details; + and \u2212 on your keyboard adjust the selected item.`;
-  const arrow = (c) => (S.ui.sort[0] === c ? (S.ui.sort[1] > 0 ? ' \u25B4' : ' \u25BE') : '');
-  $('#list-table').innerHTML = rows.length ? `<table class="items"><thead><tr>${cols.map(([c, l, cls]) => `<th class="${cls || ''}" data-act="sort" data-c="${c}">${l}${arrow(c)}</th>`).join('')}</tr></thead><tbody>
-    ${rows.map((i) => {
-      const k = key(i.group, i.name), n = m.missing(i), ck = m.cookable(i);
-      const status = (n === 0 ? '\u2713 Complete' : `Need ${n}`) + (ck ? ` \u00b7 can cook ${ck}` : '');
-      return `<tr class="row ${S.ui.sel[cat] === k ? 'sel' : ''} ${n === 0 ? 'done' : ''}" data-act="sel-item" data-key="${esc(k)}">
-        <td><div class="name-cell">${icon(i.name, 28, i.group)}<span>${esc(i.name)}</span></div></td>
-        ${showGroup ? `<td>${esc(i.group)}</td>` : ''}<td>${esc(i.method)}</td>${showStation ? `<td>${m.station(i) ? `Lv ${m.station(i)}` : ''}</td>` : ''}
-        <td class="num">${m.required(i)}</td><td class="num">${m.haveOf(i)}</td><td class="num">${n}</td><td>${status}</td></tr>`;
-    }).join('')}</tbody></table>` : '<div class="empty">No items match.</div>';
-  renderItemDetail();
-}
-function renderItemDetail() {
-  const m = S.model, el = $('#list-detail');
-  if (!el) return;
-  const i = m.byKey.get(S.ui.sel[S.view]);
-  if (!i) { el.innerHTML = '<div class="empty">Pick an item from the list to see its details.</div>'; return; }
-  const have = m.haveOf(i), req = m.required(i), miss = m.missing(i);
-  const [fg, soft] = GROUP_COLORS[i.group];
-  const info = m.itemInfo(i.name);
-  const where = [info.location, info.district].filter(Boolean).join(', ');
-  const pct = req ? Math.round((100 * Math.min(have, req)) / req) : 100;
-  const status = !req ? ['Not needed right now', 'var(--muted)'] : !miss ? ['All set! \u2713', 'var(--green)'] : [`${miss} more to go`, 'var(--orange-dk)'];
-  const can = m.cookable(i);
-  let cook = '';
-  if (i.group === 'Global Village' && m.recipeMap.has(i.name)) {
-    cook = can ? `<div style="display:flex;align-items:center;gap:6px;margin-top:10px"><b class="small" style="color:var(--green)">You can cook ${can} right now</b>
-      <button class="btn small primary" style="margin-left:auto" data-act="cook1">Cook 1</button><button class="btn small" data-act="cookn">Cook\u2026</button></div>`
-      : '<div class="small muted" style="margin-top:10px">Missing raw ingredients to cook this</div>';
-  }
-  let relTitle = '', rel = [];
-  if (i.group === 'Global Village' && m.recipeMap.has(i.name)) {
-    relTitle = 'Recipe, per dish';
-    rel = m.recipeMap.get(i.name).map((r) => [r.ingredient, 'Cooking Ingredients', `\u00d7${r.per} \u00b7 have ${m.get(key('Cooking Ingredients', r.ingredient))}`]);
-  } else if (i.group === 'Cooking Ingredients') {
-    relTitle = 'Used in';
-    rel = m.usesOf(i.name).map((r) => { const d = m.item('Global Village', r.dish); const l = d ? m.missing(d) : 0; return [r.dish, 'Global Village', `\u00d7${r.per} \u00b7 ${l ? `${l} to cook` : 'done'}`]; });
-  } else {
-    const reqs = m.requestsFor(i);
-    if (reqs.length) { relTitle = 'Bin requests'; rel = reqs.map((r) => [null, `${shortDate(r.date)} \u00b7 ${r.bin}`, `\u00d7${r.quantity}${m.binDone(r.date, r.bin) ? ' \u2713' : ''}`]); }
-  }
-  el.innerHTML = `${tileIcon(i.name, 96, i.group)}<h3 class="cardtitle" style="margin-top:12px;font-size:22px">${esc(i.name)}</h3>
-    <div class="chips" style="margin-top:6px"><span class="tag" style="background:${soft};color:${fg}">${esc(i.group)}</span><span class="tag">${esc(i.method)}</span>
-      ${m.station(i) ? `<span class="tag blue">Station Lv ${m.station(i)}</span>` : ''}${rarityTag(info.rarity)}</div>
-    ${where ? `<div class="small muted" style="margin-top:6px">Found at ${esc(where)}</div>` : TASK_GROUPS.includes(i.group) ? '<div class="small muted" style="margin-top:6px">Location not looked up yet \u2013 press Update requests</div>' : ''}
-    <div class="big"><b>${have}</b><span>/ ${req}</span></div><div class="tiny muted">in your bag / needed</div>
-    <div class="bar" style="margin:10px 0 6px;background:${soft}"><i style="width:${pct}%;background:${miss ? fg : 'var(--green)'}"></i></div>
-    <b class="small" style="color:${status[1]}">${status[0]}</b>${cook}
-    <div class="btns"><button class="btn" data-act="item-delta" data-d="-1">\u2212 1</button><button class="btn primary" data-act="item-delta" data-d="1">+ 1</button>
-      <button class="btn" data-act="item-delta" data-d="5">+ 5</button><button class="btn small" data-act="item-set">Set amount\u2026</button><button class="btn small" data-act="item-add">Add acquired\u2026</button></div>
-    ${relTitle ? `<div class="rel"><div class="small muted" style="font-weight:700;margin-bottom:6px">${relTitle}</div>
-      ${rel.slice(0, 6).map(([n, g, right]) => `<div class="r">${n ? `${icon(n, 22, g)}<span>${esc(n)}</span>` : `<span>${esc(g)}</span>`}<span class="right">${esc(right)}</span></div>`).join('')}
-      ${rel.length > 6 ? `<div class="tiny muted">+ ${rel.length - 6} more</div>` : ''}</div>` : ''}
-    <div style="margin-top:14px"><a class="linkish small" href="${itemUrl(i.name)}" target="_blank" rel="noopener">Open on loftiacodex.com \u2197</a></div>`;
+    : `${plural(rows.length, 'item')} \u00b7 ${fmt(left)} still needed${S.ui.method === 'Can cook' ? ' \u00b7 lowest Cooking Station first' : ''}. Tap an item for details.`;
+  $('#list-grid').innerHTML = rows.map((i) => {
+    const k = key(i.group, i.name), n = m.missing(i), ck = m.cookable(i);
+    const badge = S.ui.method === 'Can cook' ? `Lv ${m.station(i) || '?'} \u00b7 cook ${ck}` : n ? `need ${n}` : '\u2713';
+    return tile({ k, count: fmt(m.haveOf(i)), badge, badgeCls: S.ui.method === 'Can cook' ? 'green' : n ? 'orange' : 'green', dim: n === 0 && S.ui.method !== 'Can cook', sub: `${m.haveOf(i)} / ${m.required(i)}${ck && S.ui.method !== 'Can cook' ? ` \u00b7 can cook ${ck}` : ''}` });
+  }).join('') || '<div class="empty">No items match.</div>';
 }
 
-// ───────── Contribution bins ─────────
+// ───────── Bins ─────────
 function viewBins() {
   const m = S.model, dates = m.dates(), today = todayISO();
   if (!dates.length) return '<div class="card empty">No bin requests loaded \u2013 press Update requests.</div>';
@@ -485,20 +439,19 @@ function viewBins() {
     const done = bins.filter((b) => m.binDone(d, b)).length;
     return `<button class="chip ${d === day ? 'on' : ''}" data-act="bin-day" data-d="${d}">${shortDate(d)}${d === today ? ' (today)' : ''}<span class="n">${done < bins.length ? `${done}/${bins.length}` : '\u2713'}</span></button>`;
   }).join('');
-  const open = m.openBins(day), expired = m.isExpired(day);
-  const ready = open.filter((b) => m.binReady(day, b));
+  const open = m.openBins(day), expired = m.isExpired(day), ready = open.filter((b) => m.binReady(day, b));
   const note = expired ? 'This day has passed \u2013 requests that weren\u2019t marked done have expired.'
-    : open.length ? `${plural(open.length, 'bin')} left, ${ready.length} ready to hand in. A bin can only be marked done when every item is in your bag.` : 'Every bin is done for this day \u2713';
+    : open.length ? `${plural(open.length, 'bin')} left, ${ready.length} ready. A bin can be marked done only when every item is in your bag.` : 'Every bin is done for this day \u2713';
   const sections = EFFORTS.map(([group, effort]) => {
     const labels = Object.keys(BIN_INFO).filter((b) => b.startsWith(group));
     const withReq = labels.filter((b) => m.binEntries(day, b).length);
-    return `<div class="effort">${tileIcon(NAV_ICONS[group], 36, group)}<h2>${esc(effort)}</h2><span class="muted small">${withReq.filter((b) => m.binDone(day, b)).length}/${withReq.length} done</span></div>
+    return `<div class="effort">${tileIcon(PAGE_ICONS[group], 36, group)}<h2>${esc(effort)}</h2><span class="muted small">${withReq.filter((b) => m.binDone(day, b)).length}/${withReq.length} done</span></div>
       <div class="bins-row">${labels.map((b) => binCard(day, b)).join('')}</div>`;
   }).join('');
-  return `<div class="chips" style="margin-bottom:12px">${chips}</div>
-    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px"><h2 class="section" style="margin:0">${prettyDate(day)}</h2>
-      <span class="muted small">${esc(note)}</span>
-      ${ready.length && !expired ? `<button class="btn primary small" style="margin-left:auto" data-act="mark-day" data-d="${day}">\u2713 Mark all ready bins done</button>` : ''}</div>${sections}`;
+  return `<div class="tabs-scroll" style="margin-bottom:10px">${chips}</div>
+    <div class="row-h" style="margin-bottom:4px"><h2 class="section" style="margin:0">${prettyDate(day)}</h2>
+      ${ready.length && !expired ? `<button class="btn primary small" data-act="mark-day" data-d="${day}">\u2713 Mark all ready bins done</button>` : ''}</div>
+    <p class="note">${esc(note)}</p>${sections}`;
 }
 function binCard(day, bin) {
   const m = S.model;
@@ -510,32 +463,28 @@ function binCard(day, bin) {
   const removed = done ? m.removedFor(day, bin) : {};
   const chip = done ? '<span class="tag green">\u2713 Done</span>' : expired ? '<span class="tag">Expired</span>' : !entries.length ? ''
     : ready ? '<span class="tag green">Ready</span>' : `<span class="tag orange">Need ${short} more</span>`;
-  const ents = entries.length ? entries.map((e) => {
-    let sub, color;
-    if (done) { sub = `${removed[e.key] || 0} taken from bag`; color = '#8FB89A'; }
-    else if (expired) { sub = 'Expired'; color = 'var(--muted)'; }
-    else {
-      const [c, q] = m.binCover(day, bin, e.key), have = m.get(e.key);
-      if (c >= q) { sub = `\u2713 ${c}/${q} ready`; color = 'var(--green)'; }
-      else if (have > c && have >= q) { sub = `${c}/${q} \u00b7 ${have} in bag, some saved for earlier bins`; color = 'var(--orange-dk)'; }
-      else { sub = `${c}/${q} \u00b7 find ${q - c} more`; color = 'var(--orange-dk)'; }
-    }
-    return `<div class="ent">${icon(e.name, 34, e.group)}<div class="grow"><b class="${done || expired ? 'muted' : ''}">${esc(e.name)}</b>
-      <div class="tiny" style="color:${color}">${esc(sub)}</div></div><span class="q ${done ? 'muted' : ''}">\u00d7${e.qty}</span></div>`;
-  }).join('') : '<div class="small muted">No requests this day</div>';
+  const ents = entries.map((e) => {
+    if (done) return tile({ k: e.key, count: `\u00d7${e.qty}`, badge: `${removed[e.key] || 0} used`, badgeCls: 'muted', dim: true });
+    if (expired) return tile({ k: e.key, count: `\u00d7${e.qty}`, dim: true });
+    const [c, q] = m.binCover(day, bin, e.key);
+    return tile({ k: e.key, count: `\u00d7${e.qty}`, badge: c >= q ? '\u2713' : `${c}/${q}`, badgeCls: c >= q ? 'green' : 'orange' });
+  }).join('');
   let foot = '';
-  if (done) foot = '<span class="tiny" style="color:#8FB89A">Items removed from your bag</span><button class="btn small" style="margin-left:auto" data-act="undo-bin" data-d="' + day + '" data-b="' + esc(bin) + '">Undo</button>';
+  if (done) foot = `<span class="tiny" style="color:#8FB89A">Items removed from your bag</span><button class="btn small" data-act="undo-bin" data-d="${day}" data-b="${esc(bin)}">Undo</button>`;
   else if (entries.length && !expired && ready) foot = `<button class="btn primary small" data-act="mark-bin" data-d="${day}" data-b="${esc(bin)}">\u2713 Mark bin done</button>`;
   else if (entries.length && !expired) foot = `<span class="tiny muted">Collect ${plural(short, 'more item')} to finish this bin</span>`;
   return `<div class="card bin ${done ? 'done' : ''}"><div class="head"><span class="tag" style="background:${soft};color:${fg}">${esc(lv)}</span><b>${esc(loc)}</b>${chip}</div>
-    ${ents}<div class="foot">${foot}</div></div>`;
+    ${entries.length ? `<div class="inv-grid xs">${ents}</div>` : '<div class="small muted">No requests this day</div>'}<div class="foot">${foot}</div></div>`;
 }
 
-// ───────── Task list ─────────
+// ───────── Tasks ─────────
 function dueText(day) { const n = daysBetween(todayISO(), day); return n <= 0 ? 'Due today' : n === 1 ? 'Due tomorrow' : `Due ${shortDate(day)}`; }
 function dueTag(day) { const n = daysBetween(todayISO(), day); return `<span class="tag ${n <= 0 ? 'berry' : n === 1 ? 'orange' : 'blue'}">${dueText(day)}</span>`; }
 const taskTitle = (t) => (t.district ? `Go to ${t.district}` : t.location ? `Go to ${t.location}` : 'Location not listed');
-const taskSub = (t) => (t.location && t.district ? `find these at ${t.location}` : t.district ? 'the exact spot isn\u2019t listed on the codex' : 'press Update requests to look these up, or open each codex page');
+const taskSub = (t) => (t.location && t.district ? `find these at ${t.location}` : t.district ? 'the exact spot isn\u2019t listed on the codex' : 'press Update requests to look these up');
+function taskTile(e) {
+  return tile({ k: e.key, count: `\u00d7${e.short}`, badge: e.bonus ? `later \u00b7 ${shortDate(e.due).split(' ').slice(1).join(' ')}` : (e.rarity || ''), badgeCls: e.bonus ? 'blue' : (RARITY_TAG[e.rarity] || 'muted'), extra: 'data-ctx="task"', sub: e.bonus ? 'while you\u2019re here' : '' });
+}
 function viewTasks() {
   const m = S.model, f = S.ui.taskFilter;
   const groups = f === 'All' ? TASK_GROUPS : [f];
@@ -548,153 +497,124 @@ function viewTasks() {
     const head = t.deadline !== last ? `<h2 class="section">${prettyDate(t.deadline)} \u2013 ${dueText(t.deadline)}</h2>` : '';
     last = t.deadline;
     const main = t.items.filter((e) => !e.bonus).length, bonus = t.items.length - main;
-    const counts = {};
-    for (const e of t.items) counts[e.rarity || 'Unknown'] = (counts[e.rarity || 'Unknown'] || 0) + 1;
-    const mix = Object.entries(counts).sort((a, b) => (RARITIES.indexOf(a[0]) + 99) % 99 - (RARITIES.indexOf(b[0]) + 99) % 99).map(([k, v]) => `${v} ${k}`).join(', ');
     return `${head}<div class="card task"><div class="th"><div class="num ${t.known ? '' : 'unknown'}">${n}</div><div class="titles">
-        <h3 class="cardtitle">${esc(taskTitle(t))}</h3><div class="small muted">${esc(taskSub(t).replace(/^./, (c) => c.toUpperCase()))}. ${main} due${bonus ? `, plus ${bonus} extra while you\u2019re here` : ''}.</div>
-        <div class="tiny muted">${esc(mix)}</div></div>${dueTag(t.deadline)}</div>
-      <div style="margin-top:10px">${t.items.map((e) => taskItem(e, t)).join('')}</div></div>`;
+        <h3 class="cardtitle">${esc(taskTitle(t))}</h3><div class="small muted">${esc(taskSub(t).replace(/^./, (c) => c.toUpperCase()))}. ${main} due${bonus ? `, plus ${bonus} extra while you\u2019re here` : ''}.</div></div>${dueTag(t.deadline)}</div>
+      <div class="inv-grid sm">${t.items.map(taskTile).join('')}</div></div>`;
   }).join('');
   const finds = S.finds.slice(0, 12);
-  return `<div class="toolbar"><div class="chips">${['All', ...TASK_GROUPS].map((x) => `<button class="chip ${f === x ? 'on' : ''}" data-act="task-filter" data-v="${x}">${x}</button>`).join('')}</div>
-      <span class="small muted" style="margin-left:auto">${plural(tasks.length, 'stop')}, ${plural(nItems, 'item')} to find</span></div>
-    ${missing.length ? `<div class="banner"><span class="small">Rarity and location haven\u2019t been looked up yet for ${plural(missing.length, 'item')}, so they\u2019re listed under \u201cLocation not listed\u201d for now.</span>
-      ${S.updating ? '' : '<button class="btn primary small" style="margin-left:auto" data-act="update">Look up now</button>'}</div>` : ''}
+  return `<div class="row-h" style="margin-bottom:10px"><div class="chips">${['All', ...TASK_GROUPS].map((x) => `<button class="chip ${f === x ? 'on' : ''}" data-act="task-filter" data-v="${x}">${x}</button>`).join('')}</div>
+      <span class="small muted">${plural(tasks.length, 'stop')}, ${plural(nItems, 'item')} to find</span></div>
+    <p class="note">Tap an item to log what you found.</p>
+    ${missing.length ? `<div class="banner"><span class="small">Rarity and location haven\u2019t been looked up yet for ${plural(missing.length, 'item')}.</span>
+      ${S.updating ? '' : '<button class="btn primary small" data-act="update">Look up now</button>'}</div>` : ''}
     ${tasks.length ? body : '<div class="card"><h3 class="cardtitle" style="color:var(--green)">Nothing left to collect \u2713</h3><div class="small muted">Every open bin already has its fish and artifacts covered by what\u2019s in your bag.</div></div>'}
     ${finds.length ? `<h2 class="section">Collected today</h2><div class="card">${finds.map((x) => {
       const [g, name] = splitKey(x.item_key);
-      return `<div class="req-row"><span class="tiny muted" style="width:70px">${new Date(x.ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span>${icon(name, 24, g)}
+      return `<div class="req-row"><span class="tiny muted" style="width:62px">${new Date(x.ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span>${icon(name, 26, g)}
         <span class="grow"><b>+${x.qty}</b> ${esc(name)}</span><button class="btn small" data-act="undo-find" data-id="${x.id}">Undo</button></div>`;
     }).join('')}</div>` : ''}`;
 }
-function taskItem(e, t) {
-  const first = e.bins.filter(([d]) => d === e.due).reduce((s, [, , q]) => s + q, 0), later = e.short - first;
-  const n = daysBetween(todayISO(), e.due);
-  const when = n <= 0 ? 'for today\u2019s bin' : n === 1 ? 'for tomorrow\u2019s bin' : `for ${shortDate(e.due)}`;
-  const have = e.item ? S.model.haveOf(e.item) : 0;
-  return `<div class="ti">${icon(e.name, 34, e.group)}<div class="grow"><div class="chips"><b>${esc(e.name)}</b>${rarityTag(e.rarity)}
-      ${e.bonus ? `<span class="tag blue">While you\u2019re here \u2013 needed ${shortDate(e.due)}</span>` : ''}</div>
-      <div class="tiny muted">Find ${first} ${when}${later ? `, ${later} more for later bins` : ''}${have ? `. ${have} already in bag` : ''}</div></div>
-    ${!t.known ? `<a class="linkish tiny" href="${itemUrl(e.name)}" target="_blank" rel="noopener">Codex \u2197</a>` : ''}
-    ${e.item ? `<button class="btn primary small" data-act="found" data-key="${esc(e.key)}" data-short="${e.short}">\u2713 Found\u2026</button>` : ''}</div>`;
-}
 
-// ───────── Daily schedule ─────────
+// ───────── Daily schedule & recipes ─────────
 function viewSchedule() {
   const m = S.model, dates = m.dates(), today = todayISO();
   if (!['All', ...dates].includes(S.ui.schedDay)) S.ui.schedDay = 'All';
   const show = S.ui.schedDay === 'All' ? dates : [S.ui.schedDay];
-  return `<div class="chips" style="margin-bottom:8px">${['All', ...dates].map((d) => `<button class="chip ${S.ui.schedDay === d ? 'on' : ''}" data-act="sched-day" data-d="${d}">${d === 'All' ? 'All days' : shortDate(d) + (d === today ? ' (today)' : '')}</button>`).join('')}</div>
+  return `<div class="tabs-scroll" style="margin-bottom:8px">${['All', ...dates].map((d) => `<button class="chip ${S.ui.schedDay === d ? 'on' : ''}" data-act="sched-day" data-d="${d}">${d === 'All' ? 'All days' : shortDate(d) + (d === today ? ' (today)' : '')}</button>`).join('')}</div>
     <p class="note">Your bag is shared out day by day, earliest bins first \u2013 an item only counts as Ready for one bin.</p>
     ${show.map((d) => {
       const rows = m.schedule.filter((r) => r.date === d);
       const delivered = rows.filter((r) => m.binDone(d, r.bin)).length;
-      return `<h2 class="section">${prettyDate(d)} <span class="muted small">\u2013 ${delivered}/${rows.length} delivered</span></h2>
-      <div class="card table-card" style="max-height:none"><table class="items"><thead><tr><th>Item</th><th>Bin</th><th class="num">Daily need</th><th class="num">Have (total)</th><th>Status</th></tr></thead><tbody>
-      ${rows.map((r) => {
-        const k = key(r.group, r.name), dv = m.binDone(d, r.bin), [c, q] = m.binCover(d, r.bin, k);
-        const st = dv ? '\u2713 Delivered' : m.isExpired(d) ? 'Expired' : q && c >= q ? '\u2713 Ready' : `Short ${q - c}`;
-        return `<tr class="${dv || st === 'Expired' || st === '\u2713 Ready' ? 'done' : ''}"><td><div class="name-cell">${icon(r.name, 28, r.group)}${esc(r.name)}</div></td>
-          <td>${esc(r.bin)}</td><td class="num">${r.quantity}</td><td class="num">${m.get(k)}</td><td>${st}</td></tr>`;
-      }).join('')}</tbody></table></div>`;
+      return `<h2 class="section">${prettyDate(d)} <span class="muted small">\u2013 ${delivered}/${rows.length} delivered</span></h2><div class="inv-grid sm">${rows.map(requestTile).join('')}</div>`;
     }).join('')}`;
 }
-
-// ───────── Recipes ─────────
 function viewRecipes() {
   const m = S.model;
   const dishes = [...m.recipeMap.keys()].sort().filter((d) => { const it = m.item('Global Village', d); return it && !(S.ui.hideDone && m.missing(it) === 0); });
-  return `<div class="toolbar"><span class="small muted">Ingredient targets update automatically as you cook dishes. Click a dish to see its ingredients.</span>
-      <button class="chip ${S.ui.hideDone ? 'on' : ''}" style="margin-left:auto" data-act="hide-done">Hide finished dishes</button>
-      <button class="btn primary small" data-act="nav" data-v="Cooking Ingredients">Cooking ingredients</button></div>
-    <div class="card">${dishes.map((d) => {
+  return `<div class="row-h" style="margin-bottom:10px"><button class="chip ${S.ui.hideDone ? 'on' : ''}" data-act="hide-done">Hide finished dishes</button>
+      <button class="btn small" data-act="go" data-v="Cooking Ingredients">Cooking ingredients</button></div>
+    <p class="note">Tap a dish to see its ingredients and cook it.</p>
+    <div class="inv-grid">${dishes.map((d) => {
       const it = m.item('Global Village', d), ms = m.missing(it), can = m.cookable(it);
-      return `<details class="dish" ${ms ? 'open' : ''}><summary>${icon(d, 34, 'Global Village')}<span class="grow">${esc(d)}</span>
-          ${m.station(it) ? `<span class="tag blue">Station Lv ${m.station(it)}</span>` : ''}${can ? `<span class="tag green">Can cook ${can}</span>` : ''}
-          <span class="tag ${ms ? 'orange' : 'green'}">${ms ? `${ms} to cook` : '\u2713 Done'}</span><span class="small muted">have ${m.haveOf(it)}</span></summary>
-        <div class="ings">${m.recipeMap.get(d).map((r) => {
-          const h = m.get(key('Cooking Ingredients', r.ingredient));
-          return `<div class="req-row">${icon(r.ingredient, 26, 'Cooking Ingredients')}<span class="grow">${esc(r.ingredient)} \u00d7${r.per}</span>
-            <span class="tiny ${h >= r.per ? '' : 'muted'}" style="${h >= r.per ? 'color:var(--green)' : ''}">have ${h}${ms ? ` \u00b7 need ${ms * r.per}` : ''}</span></div>`;
-        }).join('')}</div></details>`;
+      return tile({ k: key('Global Village', d), count: fmt(m.haveOf(it)), badge: ms ? `${ms} to cook` : '\u2713', badgeCls: ms ? 'orange' : 'green', dim: !ms, sub: `${m.station(it) ? `Lv ${m.station(it)}` : ''}${can ? ` \u00b7 can cook ${can}` : ''}` });
     }).join('') || '<div class="empty">No dishes requested right now.</div>'}</div>`;
+}
+
+// ───────── More ─────────
+function viewMore() {
+  const m = S.model;
+  const itemsAt = m.itemsData?.details_at || m.itemsData?.catalog_at;
+  return `<h2 class="section" style="margin-top:0">Lists</h2>
+    <div class="more-grid">${MORE_PAGES.map((p) => `<button class="card more-btn" data-act="go" data-v="${esc(p)}">${tileIcon(PAGE_ICONS[p], 44, GROUPS.includes(p) ? p : null)}<span><b>${esc(p)}</b><span class="tiny muted">${esc(SUBTITLES[p] || '')}</span></span></button>`).join('')}</div>
+    <h2 class="section">Data</h2>
+    <div class="card list-card">
+      <button class="li" data-act="update" ${S.updating ? 'disabled' : ''}><b>\u21bb Update requests</b><span class="tiny muted">${esc(updatedText())}</span></button>
+      <button class="li" data-act="refresh-items" ${S.refreshing ? 'disabled' : ''}><b>\u21bb Refresh item data</b><span class="tiny muted">Recipes, clothing and fragments from the codex. ${itemsAt ? `Last read ${new Date(itemsAt).toLocaleDateString()}` : 'Not loaded yet'}</span></button>
+      <button class="li" data-act="import"><b>Import CSV</b><span class="tiny muted">Update or replace your counts from a file</span></button>
+      <button class="li" data-act="export"><b>Export CSV</b><span class="tiny muted">Download everything you own</span></button>
+      <button class="li" data-act="backups"><b>Backups</b><span class="tiny muted">Restore, back up now, or use a backup file</span></button></div>
+    <h2 class="section">Account</h2>
+    <div class="card list-card"><div class="li static"><b>${esc(S.session.user.email || '')}</b><span class="tiny muted">Saved to your account</span></div>
+      <button class="li" data-act="password"><b>Change password</b></button><button class="li" data-act="signout"><b>Sign out</b></button></div>
+    <p class="tiny muted" style="text-align:center;margin-top:18px">Item pictures and game data from loftiacodex.com</p>`;
 }
 
 // ───────── actions ─────────
 const ACT = {
-  nav: (d) => { S.view = d.v; S.menu = false; S.ui.search = ''; persist(); render(); scrollTo(0, 0); },
-  menu: () => { S.menu = !S.menu; $('.app').classList.toggle('menu-open', S.menu); },
-  signout: async () => { await db.signOut(); },
-  password: () => changePasswordDialog(),
-  'open-bins': (d) => { if (d.d) S.ui.binDay = d.d; ACT.nav({ v: 'Contribution Bins' }); },
+  tab: (d) => { S.back = null; go(d.v); },
+  go: (d) => { S.back = S.view; go(d.v); },
+  back: () => go(S.back && S.back !== S.view ? S.back : 'More'),
+  'open-bins': (d) => { if (d.d) S.ui.binDay = d.d; go('Bins'); },
+  open: (d, el) => openSheet(d.key, el.dataset.ctx || null),
+  'sheet-close': () => closeSheet(),
+  'sheet-mode': (d) => { S.sheet.mode = d.v; renderSheet(); if (matchMedia('(pointer: fine)').matches) $('#sh-qty')?.focus(); },
+  'sheet-save': () => sheetSave(),
+  'sheet-delta': (d) => { const k = S.sheet.key; setCounts([{ item_key: k, have: S.model.get(k) + Number(d.d) }]); },
+  'make-n': (d) => { S.sheet.makeN = Math.max(1, S.sheet.makeN + Number(d.d)); renderSheet(); },
+  'rec-n': (d) => { S.sheet.recN = Math.max(1, S.sheet.recN + Number(d.d)); renderSheet(); },
+  'sheet-make': (d) => {
+    const name = nameOfKey(S.sheet.key), r = S.model.recipesFor(name)[Number(d.i)], n = S.sheet.makeN;
+    const plan = S.model.makePlan(name, n, Number(d.i));
+    if (plan) { S.sheet.makeN = 1; setCounts(plan, `${r.station === 'Cooking Station' ? 'Cooked' : 'Made'} ${n * (r.out || 1)} ${name} \u2013 ingredients taken out of your bag`); }
+  },
+  'sheet-recycle': () => {
+    const name = nameOfKey(S.sheet.key), n = S.sheet.recN, plan = S.model.recyclePlan(name, n);
+    if (plan) { S.sheet.recN = 1; setCounts(plan, `Recycled ${n} ${name}`); }
+  },
+  // Items page
+  'items-tab': (d) => { S.ui.items.tab = d.v; persist(); $$('[data-act="items-tab"]').forEach((b) => b.classList.toggle('on', b.dataset.v === d.v)); fillItems(); },
+  'items-owned': (d, el) => { S.ui.items.owned = !S.ui.items.owned; persist(); el.classList.toggle('on', S.ui.items.owned); fillItems(); },
+  'items-sort': (d) => { S.ui.items.sort = d.v; persist(); $$('[data-act="items-sort"]').forEach((b) => b.classList.toggle('on', b.dataset.v === d.v)); fillItems(); },
+  'items-clear': () => { S.ui.items.search = ''; $('#items-search').value = ''; fillItems(); $('#items-search').focus(); },
   // lists
   method: (d) => { S.ui.method = d.v; persist(); renderView(); },
   missing: () => { S.ui.missingOnly = !S.ui.missingOnly; persist(); renderView(); },
-  sort: (d) => { S.ui.sort = [d.c, S.ui.sort[0] === d.c ? -S.ui.sort[1] : (['need', 'have', 'missing', 'status'].includes(d.c) ? -1 : 1)]; persist(); fillList(); },
   'list-clear': () => { S.ui.search = ''; $('#list-search').value = ''; fillList(); $('#list-search').focus(); },
-  'sel-item': (d) => { S.ui.sel[S.view] = d.key; $$('#list-table tr.row').forEach((r) => r.classList.toggle('sel', r.dataset.key === d.key)); renderItemDetail(); },
-  'item-delta': (d) => { const i = selItem(); if (i) setCounts([{ item_key: key(i.group, i.name), have: S.model.haveOf(i) + Number(d.d) }]); },
-  'item-set': async () => {
-    const i = selItem(); if (!i) return;
-    const n = await askAmount({ title: 'Set amount', prompt: `How many ${i.name} do you have right now?`, initial: S.model.haveOf(i), item: i });
-    if (n != null) setCounts([{ item_key: key(i.group, i.name), have: n }]);
-  },
-  'item-add': async () => {
-    const i = selItem(); if (!i) return;
-    const n = await askAmount({ title: 'Items acquired', prompt: `How many new ${i.name} did you get?`, initial: 1, min: 1, item: i });
-    if (n != null) setCounts([{ item_key: key(i.group, i.name), have: S.model.haveOf(i) + n }], `+${n} ${i.name}`);
-  },
-  cook1: () => cook(1),
-  cookn: async () => {
-    const i = selItem(), can = S.model.cookable(i);
-    const n = await askAmount({ title: 'Cook', prompt: `How many ${i.name} did you cook? You have ingredients for ${can}.`, initial: Math.min(can, Math.max(1, S.model.missing(i))), min: 1, max: can, item: i });
-    if (n) cook(n);
-  },
-  // My Items
-  'db-owned': (d) => { S.ui.db.owned = d.v === 'true'; persist(); $$('[data-act="db-owned"]').forEach((b) => b.classList.toggle('on', b.dataset.v === d.v)); fillMyItems(); },
-  'db-sort': (d) => { S.ui.db.sort = d.v; persist(); $$('[data-act="db-sort"]').forEach((b) => b.classList.toggle('on', b.dataset.v === d.v)); fillMyItems(); },
-  'db-cat': (d) => { S.ui.db.cat = d.v; persist(); $$('[data-act="db-cat"]').forEach((b) => b.classList.toggle('on', b.dataset.v === d.v)); fillMyItems(); },
-  'db-clear': () => { S.ui.db.search = ''; $('#db-search').value = ''; fillMyItems(); $('#db-search').focus(); },
-  'db-sel': (d) => { S.ui.db.sel = d.key; $$('.inv.sel').forEach((t) => t.classList.remove('sel')); $(`.inv-cell[data-key="${CSS.escape(d.key)}"] .inv`)?.classList.add('sel'); renderDbPanel(); },
-  'db-delta': (d) => dbSet(S.model.get(S.ui.db.sel) + Number(d.d)),
-  'db-save': () => saveTypedQty(),
-  // bins
+  // bins, tasks, schedule, recipes
   'bin-day': (d) => { S.ui.binDay = d.d; persist(); renderView(); },
   'mark-bin': (d) => markBin(d.d, d.b),
   'undo-bin': (d) => undoBin(d.d, d.b),
   'mark-day': (d) => markDay(d.d),
-  // tasks, schedule, recipes
   'task-filter': (d) => { S.ui.taskFilter = d.v; persist(); renderView(); },
-  found: (d) => foundItem(d.key, Number(d.short)),
   'undo-find': (d) => undoFind(Number(d.id)),
   'sched-day': (d) => { S.ui.schedDay = d.d; persist(); renderView(); },
   'hide-done': () => { S.ui.hideDone = !S.ui.hideDone; persist(); renderView(); },
-  // top bar
+  // data & account
   update: () => runUpdate(),
+  'refresh-items': () => refreshItemData(),
   import: () => { const f = $('#csv-file'); f.value = ''; f.click(); },
   export: () => exportCSV(),
   backups: () => backupsDialog(),
+  password: () => changePasswordDialog(),
+  signout: async () => { await db.signOut(); },
   send: () => sendLink(),
 };
-const selItem = () => S.model.byKey.get(S.ui.sel[S.view]);
-function saveTypedQty() {
-  const inp = $('#db-qty'), n = Number(inp?.value.replace(/,/g, ''));
-  if (!Number.isInteger(n) || n < 0) { const msg = $('#db-qty-msg'); msg.textContent = 'Enter a whole number (0 or more)'; msg.style.color = 'var(--berry)'; return; }
-  const r = S._dbCache.rows.find((x) => x.key === S.ui.db.sel);
-  dbSet(n);
-  toast(`${r ? r.name : 'Item'}: ${fmt(n)}`);
-}
-function cook(n) {
-  const i = selItem(), plan = S.model.cookPlan(i, n);
-  if (plan) setCounts(plan, `Cooked ${n} ${i.name} \u2013 ingredients taken out of your bag`);
-}
+
 async function markBin(day, bin) {
   const m = S.model; m.recalc(todayISO());
   const plan = m.completePlan(day, bin);
   if (!plan) { await infoBox('Bin not complete', 'Every item for this bin needs to be in your bag before it can be marked done.'); return; }
-  applyComplete(day, bin, plan);
-  renderKeepScroll();
+  applyComplete(day, bin, plan); refresh();
   toast(`${(BIN_INFO[bin] || ['', bin])[1]} done \u2013 ${plural(plan.reduce((t, p) => t + p.removed, 0), 'item')} taken out of your bag`);
   await safely(() => db.completeBin(day, bin, plan), 'The bin couldn\u2019t be marked done.');
 }
@@ -709,7 +629,7 @@ async function undoBin(day, bin) {
   for (const c of m.completions.filter((c) => c.day === day && c.bin === bin)) m.have.set(c.item_key, m.get(c.item_key) + c.removed);
   m.completions = m.completions.filter((c) => !(c.day === day && c.bin === bin));
   m.done.delete(`${day}|${bin}`);
-  m.recalc(todayISO()); renderKeepScroll();
+  m.recalc(todayISO()); refresh();
   toast('Undone \u2013 items put back in your bag', '\u21b6');
   await safely(() => db.undoBin(day, bin), 'The bin couldn\u2019t be un-marked.');
 }
@@ -723,47 +643,54 @@ async function markDay(day) {
   if (!(await confirmBox('Mark ready bins done', text, 'Mark done'))) return;
   const plans = [];
   for (const b of ready) { m.recalc(todayISO()); const p = m.completePlan(day, b); if (p) { applyComplete(day, b, p); plans.push([b, p]); } }
-  renderKeepScroll();
+  refresh();
   toast(`${plural(plans.length, 'bin')} done`);
   await safely(async () => { for (const [b, p] of plans) await db.completeBin(day, b, p); }, 'Some bins couldn\u2019t be marked done.');
 }
-async function foundItem(k, short) {
-  const item = S.model.byKey.get(k);
-  const n = await askAmount({ title: 'Found items', prompt: `How many ${item.name} did you find?`, initial: short, min: 1, item });
-  if (!n) return;
-  S.model.have.set(k, S.model.get(k) + n); rebuild();
+async function logFind(k, n) {
+  const m = S.model, name = nameOfKey(k);
+  const proposed = new Map([[k, m.get(k) + n]]);
+  const { changes: extra, messages } = m.completeClothing(proposed);
+  m.have.set(k, m.get(k) + n);
+  for (const c of extra) m.have.set(c.item_key, c.have);
+  rebuild();
   const entry = { id: null, ts: new Date().toISOString(), item_key: k, qty: n };
   S.finds.unshift(entry);
-  renderKeepScroll();
-  toast(`+${n} ${item.name} added to your bag${short - n > 0 ? ` \u2013 ${short - n} more to go` : ' \u2013 all found'}`);
-  await safely(async () => { entry.id = await db.logFind(k, n); renderKeepScroll(); }, 'The find couldn\u2019t be saved.');
+  closeSheet(); refresh();
+  toast([`+${n} ${name} added to your bag`, ...messages].join(' \u00b7 '));
+  await safely(async () => {
+    entry.id = await db.logFind(k, n);
+    if (extra.length) await db.setInventory(extra.map((c) => ({ item_key: c.item_key, have: c.have })));
+    refresh();
+  }, 'The find couldn\u2019t be saved.');
 }
 async function undoFind(id) {
   const f = S.finds.find((x) => x.id === id);
   if (!f) return;
   S.model.have.set(f.item_key, Math.max(0, S.model.get(f.item_key) - f.qty)); rebuild();
   S.finds = S.finds.filter((x) => x !== f);
-  renderKeepScroll();
+  refresh();
   toast('Find undone \u2013 taken back out of your bag', '\u21b6');
   await safely(() => db.undoFind(id), 'The find couldn\u2019t be undone.');
 }
 
-// ───────── Update requests ─────────
+// ───────── Update requests & Refresh item data ─────────
 async function runUpdate() {
   if (S.updating) return;
-  S.updating = true; render();
+  S.updating = true; refresh();
   toast('Checking loftiacodex.com\u2026', '\u21bb');
   try {
     const before = JSON.stringify(S.model.schedule.map((r) => [r.date, r.bin, r.name, r.quantity]).sort());
     const data = await db.runUpdate(todayISO(), Object.keys(RECIPE_BOOK));
     const old = S.model;
-    S.model = new Model(data);
+    S.model = new Model(data, old.itemsData);
     S.model.have = old.have; S.model.completions = old.completions; S.model.done = old.done;
     S.model.recalc(todayISO());
-    S._dbCache = null; S.updateError = null; S.updating = false;
-    render();
+    S._db = null; S.updateError = null; S.updating = false;
+    refresh();
     const after = JSON.stringify(S.model.schedule.map((r) => [r.date, r.bin, r.name, r.quantity]).sort());
-    let msg = before === after ? 'Requests are already up to date' : `Requests updated \u2013 ${data.schedule.length} requests for ${eventInfo().range}`;
+    const ds = S.model.dates();
+    let msg = before === after ? 'Requests are already up to date' : `Requests updated \u2013 ${data.schedule.length} requests for ${ds.length ? rangeText(ds[0], ds[ds.length - 1]) : 'the coming days'}`;
     if (data.info_unknown) msg += ` \u00b7 location not found for ${plural(data.info_unknown, 'item')}`;
     if (S.model.missingRecipes.length) msg += ` \u00b7 no recipe found for ${S.model.missingRecipes.slice(0, 3).join(', ')}`;
     toast(msg);
@@ -771,8 +698,37 @@ async function runUpdate() {
       await infoBox('Some bins could not be updated', `These bin pages on loftiacodex.com couldn\u2019t be read:\n\n${data.failed_bins.map((b) => `\u2022 ${b}`).join('\n')}\n\nThey still show their requests from your last update. Everything else was updated. Try Update requests again later.`);
     }
   } catch (e) {
-    S.updating = false; S.updateError = new Date(); $('.toast')?.remove(); render();
+    S.updating = false; S.updateError = new Date(); $('.toast')?.remove(); refresh();
     await infoBox('Update failed', `${e.message}\n\nNothing was changed \u2013 your saved requests, inventory and completed bins are exactly as they were.`);
+  }
+}
+async function refreshItemData() {
+  if (S.refreshing) return;
+  S.refreshing = true;
+  const m = modal({ title: 'Refreshing item data', dismiss: false,
+    body: '<p class="small" id="rf-msg">Reading the item list from loftiacodex.com\u2026</p><div class="bar"><i id="rf-bar" style="width:3%"></i></div><p class="tiny muted">This reads each recipe and clothing page once and takes a few minutes. You can keep this window open while it works.</p>',
+    foot: '<button class="btn" data-x="stop">Stop</button>' });
+  let stop = false;
+  m.el.addEventListener('click', (e) => { if (e.target.closest('[data-x="stop"]')) { stop = true; $('#rf-msg', m.el).textContent = 'Stopping after this batch\u2026'; } });
+  try {
+    const cat = await db.itemCatalog();
+    const todo = cat.todo || [];
+    let done = 0, failed = 0;
+    for (let i = 0; i < todo.length && !stop; i += 15) {
+      const batch = todo.slice(i, i + 15);
+      $('#rf-msg', m.el).textContent = `Reading item pages\u2026 ${done} of ${todo.length}`;
+      const r = await db.itemDetails(batch);
+      done += batch.length; failed += (r.failed || []).length;
+      $('#rf-bar', m.el).style.width = `${Math.max(3, Math.round((100 * done) / todo.length))}%`;
+    }
+    await reloadAll();
+    m.close(); S.refreshing = false; render();
+    const recipes = Object.values(S.model.itemsData.details || {}).filter((x) => x.craft).length;
+    toast(`Item data updated \u2013 ${fmt(cat.catalog)} items, ${recipes} crafting recipes, ${S.model.piecesFor.size} clothing items made from pieces${failed ? ` (${failed} pages couldn\u2019t be read)` : ''}`);
+  } catch (e) {
+    m.close(); S.refreshing = false;
+    await infoBox('Refresh failed', `${e.message}\n\nWhatever was read before the error has been kept. You can try again later.`);
+    try { await reloadAll(); render(); } catch { /* keep what we have */ }
   }
 }
 
@@ -780,13 +736,15 @@ async function runUpdate() {
 function exportCSV() {
   const m = S.model;
   const rows = m.database().filter((r) => m.get(r.key) > 0).map((r) => [r.name, r.category, m.get(r.key)]);
-  const blob = new Blob([toCSV([['Item', 'Category', 'Quantity'], ...rows])], { type: 'text/csv;charset=utf-8' });
+  downloadText(toCSV([['Item', 'Category', 'Quantity'], ...rows]), `loftia_inventory_${todayISO()}.csv`, 'text/csv;charset=utf-8');
+  toast(`Exported ${plural(rows.length, 'item')}`);
+}
+function downloadText(text, filename, type) {
   const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `loftia_inventory_${todayISO()}.csv`;
+  a.href = URL.createObjectURL(new Blob([text], { type }));
+  a.download = filename;
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-  toast(`Exported ${plural(rows.length, 'item')}`);
 }
 document.getElementById('csv-file').addEventListener('change', async (e) => {
   const file = e.target.files[0];
@@ -802,13 +760,16 @@ document.getElementById('csv-file').addEventListener('change', async (e) => {
   try {
     await db.makeBackup(`Before importing ${file.name}`);
     const totals = S.model.importTotals(final);
+    const { changes: extra, messages } = S.model.completeClothing(totals);
+    for (const c of extra) totals.set(c.item_key, c.have);
     await db.setInventory([...totals].map(([item_key, have]) => ({ item_key, have })), mode === 'replace');
-    await reloadAll(); S._dbCache = null; render();
-    toast(`Imported ${plural(totals.size, 'item')} \u2013 ${mode === 'replace' ? 'inventory replaced' : 'only these items updated'}. A backup was saved first.`);
+    await reloadAll(); render();
+    toast(`Imported ${plural(totals.size, 'item')} \u2013 ${mode === 'replace' ? 'inventory replaced' : 'only these items updated'}. A backup was saved first.${messages.length ? ` ${messages.join(' \u00b7 ')}` : ''}`);
   } catch (err) {
     await infoBox('Import failed', `${err.message}\n\nNothing was changed.`);
   }
 });
+
 function chooseImportMode(n, filename) {
   return new Promise((res) => {
     const m = modal({
@@ -825,13 +786,14 @@ function chooseImportMode(n, filename) {
   });
 }
 
+
 /** Review every CSV row. Unclear rows get picture choices plus a search for any codex item. */
 function reviewImport(resolved, unclear, filename) {
   return new Promise((res) => {
     const autoQty = new Map(), fileQty = new Map();
     for (const [n, , q] of resolved) autoQty.set(n, (autoQty.get(n) || 0) + q);
     for (const [n, q] of autoQty) fileQty.set(n, q);
-    for (const r of unclear) { const h = CATALOG_INDEX.get(normName(r.name)); const n = h ? h[0] : r.name; fileQty.set(n, (fileQty.get(n) || 0) + r.qty); }
+    for (const r of unclear) { const h = S.model.index.get(normName(r.name)); const n = h ? h[0] : r.name; fileQty.set(n, (fileQty.get(n) || 0) + r.qty); }
     const cards = unclear.map((r) => ({ row: r, choice: r.candidates[0] || (r.exact ? '__skip__' : '__keep__'), custom: null, finder: false, q: '' }));
     const label = (c) => (c.choice === '__skip__' ? null : c.choice === '__keep__' ? c.row.name : c.choice);
     const conflict = (i) => {
@@ -866,12 +828,12 @@ function reviewImport(resolved, unclear, filename) {
     };
     const finderResults = (i) => {
       const c = cards[i], toks = normName(c.q).split(' ').filter(Boolean);
-      const hits = (toks.length ? ALL_CATALOG_NAMES.filter((n) => toks.every((t) => normName(n).includes(t))) : ALL_CATALOG_NAMES).slice(0, 40);
+      const hits = (toks.length ? S.model.allNames.filter((n) => toks.every((t) => normName(n).includes(t))) : S.model.allNames).slice(0, 40);
       let html = hits.map((n) => `<button data-res="${i}" data-name="${esc(n)}">${icon(n, 22, groupOfCat(catOfName(n)))}<span>${esc(n)}</span>${fileQty.get(n) ? `<span class="tiny" style="margin-left:auto;color:var(--berry)">in file \u00d7${fileQty.get(n)}</span>` : ''}</button>`).join('');
-      if (c.q.trim() && !CATALOG_INDEX.has(normName(c.q))) html += `<button data-res="${i}" data-name="${esc(c.q.trim())}">Use \u201c${esc(c.q.trim())}\u201d as typed</button>`;
+      if (c.q.trim() && !S.model.index.has(normName(c.q))) html += `<button data-res="${i}" data-name="${esc(c.q.trim())}">Use \u201c${esc(c.q.trim())}\u201d as typed</button>`;
       return html || '<div class="tiny muted" style="padding:8px">No matches</div>';
     };
-    const autoList = [...resolved].sort((a, b) => (CATEGORIES.indexOf(a[1]) + 99) % 99 - (CATEGORIES.indexOf(b[1]) + 99) % 99 || a[0].localeCompare(b[0]));
+    const autoList = [...resolved].sort((a, b) => (CAT_ORDER.indexOf(a[1]) + 99) % 99 - (CAT_ORDER.indexOf(b[1]) + 99) % 99 || a[0].localeCompare(b[0]));
     const autoHTML = (q) => {
       const toks = normName(q).split(' ').filter(Boolean);
       const hits = autoList.filter(([n, c]) => toks.every((t) => normName(`${n} ${c}`).includes(t)));
@@ -916,7 +878,7 @@ function reviewImport(resolved, unclear, filename) {
         if (!ok) return;
       }
       const final = [...resolved];
-      for (const c of cards) { const n = label(c); if (n) final.push([n, (CATALOG_INDEX.get(normName(n)) || ['', c.row.category])[1], c.row.qty]); }
+      for (const c of cards) { const n = label(c); if (n) final.push([n, (S.model.index.get(normName(n)) || ['', c.row.category])[1], c.row.qty]); }
       m.close(final);
     });
     m.el.addEventListener('input', (e) => {
@@ -932,6 +894,7 @@ function reviewImport(resolved, unclear, filename) {
     });
   });
 }
+
 
 // ───────── backups ─────────
 async function backupsDialog() {
@@ -997,6 +960,7 @@ document.getElementById('backup-file').addEventListener('change', async (e) => {
   }
 });
 
+
 // ───────── sign-in & setup screens ─────────
 function signInScreen() {
   return `<div class="signin"><div class="card"><div class="logo" style="padding:0">Loftia</div>
@@ -1056,37 +1020,31 @@ function setupScreen() {
     <p class="small">This site isn\u2019t connected to Supabase yet. Open <b>js/config.js</b> on GitHub and paste in your Supabase project URL and anon key \u2013 the README walks you through it.</p></div></div>`;
 }
 
+
 // ───────── global events ─────────
-root.addEventListener('click', (e) => {
+const CAT_ORDER = [...ADD_TABS, 'Flowers'];
+document.addEventListener('click', (e) => {
   const el = e.target.closest('[data-act]');
-  if (!el) return;
+  if (!el || el.closest('.overlay')) return;
   if (el.dataset.act === 'send') e.preventDefault();
   ACT[el.dataset.act]?.(el.dataset, el, e);
 });
 root.addEventListener('submit', (e) => { if (e.target.id === 'signin-form') { e.preventDefault(); signIn(); } });
 const onListSearch = debounce(() => fillList(), 120);
-const onDbSearch = debounce(() => fillMyItems(), 120);
+const onItemsSearch = debounce(() => fillItems(), 120);
 root.addEventListener('input', (e) => {
   if (e.target.id === 'list-search') { S.ui.search = e.target.value; onListSearch(); }
-  if (e.target.id === 'db-search') { S.ui.db.search = e.target.value; onDbSearch(); }
-});
-root.addEventListener('keydown', (e) => {
-  if (e.target.id === 'db-qty' && e.key === 'Enter') { e.preventDefault(); saveTypedQty(); }
-  if ((e.target.id === 'db-search' || e.target.id === 'list-search') && e.key === 'Escape') { e.target.value = ''; e.target.dispatchEvent(new Event('input', { bubbles: true })); }
+  if (e.target.id === 'items-search') { S.ui.items.search = e.target.value; onItemsSearch(); }
 });
 document.addEventListener('keydown', (e) => {
+  if (e.target.id === 'sh-qty' && e.key === 'Enter') { e.preventDefault(); sheetSave(); return; }
+  if ((e.target.id === 'items-search' || e.target.id === 'list-search') && e.key === 'Escape') { e.target.value = ''; e.target.dispatchEvent(new Event('input', { bubbles: true })); return; }
   if (document.querySelector('.overlay')) return;
-  const typing = /INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName || '');
+  if (e.key === 'Escape' && S.sheet) { e.preventDefault(); closeSheet(); return; }
   if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
-    const s = $('#db-search') || $('#list-search');
+    const s = $('#items-search') || $('#list-search');
     if (s) { e.preventDefault(); s.focus(); s.select(); }
-    return;
   }
-  if (typing) return;
-  const delta = e.key === '+' || e.key === '=' ? 1 : e.key === '-' ? -1 : 0;
-  if (!delta) return;
-  if (S.view === 'My Items' && S.ui.db.sel) { e.preventDefault(); dbSet(S.model.get(S.ui.db.sel) + delta); }
-  else if (LIST_VIEWS.includes(S.view) && selItem()) { e.preventDefault(); ACT['item-delta']({ d: delta }); }
 });
 
 // ───────── start ─────────
@@ -1097,7 +1055,7 @@ async function start() {
     const was = !!S.session;
     S.session = s;
     if (s && !was) { S.model = null; render(); await loadOrFail(); }
-    if (!s) { S.model = null; render(); }
+    if (!s) { S.model = null; closeSheet(); render(); }
   });
   render();
   if (S.session) await loadOrFail();

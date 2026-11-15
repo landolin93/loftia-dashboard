@@ -32,13 +32,14 @@ export async function signOut() { await sb.auth.signOut(); }
 // ── load everything ──
 export async function loadAll() {
   const start = new Date(); start.setHours(0, 0, 0, 0);
-  const [req, inv, comp, finds] = await Promise.all([
+  const [req, items, inv, comp, finds] = await Promise.all([
     sb.from('app_data').select('data').eq('id', 'requests').maybeSingle(),
+    sb.from('app_data').select('data').eq('id', 'items').maybeSingle(),
     sb.from('inventory').select('item_key, have').limit(5000),
     sb.from('completions').select('day, bin, item_key, removed, requested').limit(5000),
     sb.from('finds').select('id, ts, item_key, qty').gte('ts', start.toISOString()).order('id', { ascending: false }).limit(50),
   ]);
-  return { requests: check(req)?.data || null, inventory: check(inv), completions: check(comp), finds: check(finds) };
+  return { requests: check(req)?.data || null, items: check(items)?.data || null, inventory: check(inv), completions: check(comp), finds: check(finds) };
 }
 
 // ── changes (each one is all-or-nothing on the server) ──
@@ -58,9 +59,9 @@ export async function addBackup(label, data) {
 }
 export async function restoreBackup(id) { check(await sb.rpc('restore_backup', { p_id: id })); }
 
-// ── Update requests (runs the server function that reads loftiacodex.com) ──
-export async function runUpdate(today, knownDishes) {
-  const { data, error } = await sb.functions.invoke('update-requests', { body: { today, known_dishes: knownDishes } });
+// ── server function calls (it reads loftiacodex.com for us) ──
+async function callFn(body) {
+  const { data, error } = await sb.functions.invoke('update-requests', { body });
   if (error) {
     let msg = '';
     try { msg = (await error.context.json()).error; } catch { /* not JSON */ }
@@ -72,5 +73,9 @@ export async function runUpdate(today, knownDishes) {
     throw new Error(msg);
   }
   if (data?.error) throw new Error(data.error);
-  return data.data;
+  return data;
 }
+export async function runUpdate(today, knownDishes) { return (await callFn({ today, known_dishes: knownDishes })).data; }
+/** "Refresh item data": step 1 reads the item list, step 2 reads item pages in batches */
+export async function itemCatalog() { return callFn({ action: 'catalog' }); }
+export async function itemDetails(slugs) { return callFn({ action: 'details', slugs }); }
