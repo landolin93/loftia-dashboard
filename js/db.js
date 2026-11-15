@@ -17,6 +17,16 @@ export async function sendSignInLink(email) {
   const redirect = location.origin + location.pathname;
   check(await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: redirect } }));
 }
+export async function signInWithPassword(email, password) {
+  const { error } = await sb.auth.signInWithPassword({ email, password });
+  if (!error) return;
+  const m = error.message || '';
+  if (/invalid login credentials/i.test(m)) throw new Error('That email and password don\u2019t match. Check them and try again \u2013 or, if you haven\u2019t yet, create your account in Supabase (README step 6).');
+  if (/email not confirmed/i.test(m)) throw new Error('This account isn\u2019t confirmed yet. In Supabase > Authentication > Users, open your user and confirm it (or re-create it with \u201cAuto Confirm User\u201d ticked).');
+  if (/rate limit/i.test(m)) throw new Error('Too many tries in a row. Wait a minute, then try again.');
+  throw new Error(m);
+}
+export async function changePassword(password) { check(await sb.auth.updateUser({ password })); }
 export async function signOut() { await sb.auth.signOut(); }
 
 // ── load everything ──

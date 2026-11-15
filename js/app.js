@@ -143,7 +143,7 @@ function askAmount({ title, prompt, initial = 1, min = 0, max = null, item = nul
     };
     m.onClose = (v) => res(v == null || v === false ? null : v);
     m.el.addEventListener('click', (e) => { const b = e.target.closest('[data-x]'); if (!b) return; b.dataset.x === 'yes' ? ok() : m.close(null); });
-    inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') ok(); });
+    inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); ok(); } });
     inp.focus(); inp.select();
   });
 }
@@ -201,7 +201,7 @@ function sidebar() {
     <div class="side-foot"><div class="row"><span class="dot"></span><b>Saved to your account</b></div>
       <div class="muted">${ds.length ? `Requests ${rangeText(ds[0], ds[ds.length - 1])}` : 'No requests loaded'}</div>
       <div class="muted tiny" style="margin-top:6px">${esc(updatedText())}</div>
-      <div class="muted tiny" style="margin-top:8px">${esc(S.session.user.email || '')} \u00b7 <button class="linkish tiny" data-act="signout">Sign out</button></div>
+      <div class="muted tiny" style="margin-top:8px">${esc(S.session.user.email || '')} \u00b7 <button class="linkish tiny" data-act="signout">Sign out</button> \u00b7 <button class="linkish tiny" data-act="password">Change password</button></div>
       <div class="muted tiny" style="margin-top:4px">Item art from loftiacodex.com</div></div></aside>`;
 }
 function topbar() {
@@ -626,6 +626,7 @@ const ACT = {
   nav: (d) => { S.view = d.v; S.menu = false; S.ui.search = ''; persist(); render(); scrollTo(0, 0); },
   menu: () => { S.menu = !S.menu; $('.app').classList.toggle('menu-open', S.menu); },
   signout: async () => { await db.signOut(); },
+  password: () => changePasswordDialog(),
   'open-bins': (d) => { if (d.d) S.ui.binDay = d.d; ACT.nav({ v: 'Contribution Bins' }); },
   // lists
   method: (d) => { S.ui.method = d.v; persist(); renderView(); },
@@ -1000,17 +1001,54 @@ document.getElementById('backup-file').addEventListener('change', async (e) => {
 function signInScreen() {
   return `<div class="signin"><div class="card"><div class="logo" style="padding:0">Loftia</div>
     <h1 style="font:600 24px var(--display);margin:22px 0 4px">Sign in to your dashboard</h1>
-    <p class="muted small" style="margin:0">Enter your email and we\u2019ll send you a sign-in link. No password needed.</p>
-    <form id="signin-form"><input id="email" type="email" required placeholder="you@example.com" autocomplete="email" aria-label="Email">
-    <button class="btn primary" style="width:100%" data-act="send">Email me a sign-in link</button></form>
-    <p class="small muted" id="signin-msg" style="margin-bottom:0"></p></div></div>`;
+    <form id="signin-form">
+      <label class="small" for="email" style="display:block;margin-top:14px;font-weight:700">Email</label>
+      <input id="email" type="email" required autocomplete="email" style="margin:4px 0 0">
+      <label class="small" for="password" style="display:block;margin-top:12px;font-weight:700">Password</label>
+      <input id="password" type="password" required autocomplete="current-password" style="margin:4px 0 14px">
+      <button class="btn primary" style="width:100%" type="submit">Sign in</button></form>
+    <p class="small" id="signin-msg" style="margin:10px 0 0;min-height:1.4em"></p>
+    <p class="tiny muted" style="margin:14px 0 0">No password yet? Create your account in Supabase first \u2013 see README step 6.
+      Or <button class="linkish tiny" data-act="send">email me a sign-in link instead</button>.</p></div></div>`;
+}
+function changePasswordDialog() {
+  const m = modal({
+    title: 'Change password',
+    body: `<label class="small" style="font-weight:700" for="pw1">New password</label>
+      <input id="pw1" class="search" style="width:100%;border-radius:12px;margin:4px 0 10px" type="password" autocomplete="new-password">
+      <label class="small" style="font-weight:700" for="pw2">Type it again</label>
+      <input id="pw2" class="search" style="width:100%;border-radius:12px;margin:4px 0 6px" type="password" autocomplete="new-password">
+      <div class="tiny muted err">At least 6 characters.</div>`,
+    foot: '<button class="btn" data-x="no">Cancel</button><button class="btn primary" data-x="yes">Save password</button>',
+  });
+  const save = async () => {
+    const a = $('#pw1', m.el).value, b = $('#pw2', m.el).value, err = $('.err', m.el);
+    const bad = (t) => { err.textContent = t; err.style.color = 'var(--berry)'; };
+    if (a.length < 6) return bad('Use at least 6 characters.');
+    if (a !== b) return bad('The two passwords don\u2019t match.');
+    try { await db.changePassword(a); m.close(); toast('Password changed'); } catch (e) { bad(e.message); }
+  };
+  m.el.addEventListener('click', (e) => { const x = e.target.closest('[data-x]'); if (!x) return; x.dataset.x === 'yes' ? save() : m.close(); });
+  m.el.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); save(); } });
+  $('#pw1', m.el).focus();
+}
+async function signIn() {
+  const email = $('#email').value.trim(), password = $('#password').value, msg = $('#signin-msg');
+  if (!email || !password) { msg.textContent = 'Enter your email and password.'; msg.style.color = 'var(--berry)'; return; }
+  const btn = $('#signin-form button[type="submit"]');
+  btn.disabled = true; btn.textContent = 'Signing in\u2026'; msg.textContent = '';
+  try { await db.signInWithPassword(email, password); }
+  catch (e) { msg.textContent = e.message; msg.style.color = 'var(--berry)'; btn.disabled = false; btn.textContent = 'Sign in'; }
 }
 async function sendLink() {
   const email = $('#email').value.trim(), msg = $('#signin-msg');
-  if (!email) return;
-  msg.textContent = 'Sending\u2026';
-  try { await db.sendSignInLink(email); msg.textContent = `Check ${email} for a sign-in link, then open it on this device.`; msg.style.color = 'var(--green)'; }
-  catch (e) { msg.textContent = `Couldn\u2019t send the link: ${e.message}`; msg.style.color = 'var(--berry)'; }
+  if (!email) { msg.textContent = 'Enter your email first, then click the link again.'; msg.style.color = 'var(--berry)'; $('#email').focus(); return; }
+  msg.textContent = 'Sending\u2026'; msg.style.color = 'var(--muted)';
+  try { await db.sendSignInLink(email); msg.textContent = `Check ${email} for a sign-in link (and your spam folder), then open it on this device.`; msg.style.color = 'var(--green)'; }
+  catch (e) {
+    msg.textContent = /rate limit/i.test(e.message) ? 'Supabase\u2019s free email service has hit its hourly limit. Sign in with your password instead, or try the link again in an hour.' : `Couldn\u2019t send the link: ${e.message}`;
+    msg.style.color = 'var(--berry)';
+  }
 }
 function setupScreen() {
   return `<div class="signin"><div class="card"><div class="logo" style="padding:0">Loftia</div>
@@ -1025,7 +1063,7 @@ root.addEventListener('click', (e) => {
   if (el.dataset.act === 'send') e.preventDefault();
   ACT[el.dataset.act]?.(el.dataset, el, e);
 });
-root.addEventListener('submit', (e) => { if (e.target.id === 'signin-form') { e.preventDefault(); sendLink(); } });
+root.addEventListener('submit', (e) => { if (e.target.id === 'signin-form') { e.preventDefault(); signIn(); } });
 const onListSearch = debounce(() => fillList(), 120);
 const onDbSearch = debounce(() => fillMyItems(), 120);
 root.addEventListener('input', (e) => {
