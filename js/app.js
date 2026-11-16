@@ -2,7 +2,7 @@
 import * as db from './db.js';
 import {
   Model, GROUPS, TASK_GROUPS, RARITIES, CATEGORY_GROUP, ADD_TABS, TAB_LABEL,
-  key, splitKey, normName, iconUrl, itemUrl, todayISO, addDays, daysBetween, shortDate, prettyDate,
+  key, splitKey, normName, iconUrl, codexIconUrl, setLocalIcons, localIconCount, itemUrl, todayISO, addDays, daysBetween, shortDate, prettyDate,
   rangeText, readInventoryCSV, toCSV, readBackupJSON, makeBackupJSON,
 } from './logic.js';
 import { BIN_INFO, EFFORTS, RECIPE_BOOK } from './gamedata.js';
@@ -47,17 +47,26 @@ const OLD_VIEWS = { Dashboard: 'Home', 'My Items': 'Items', 'Task List': 'Tasks'
 /** <img> for an item, with a lettered tile if the picture can't load */
 function icon(name, size = 28, group = null, cls = 'icon') {
   const [fg, bg] = GROUP_COLORS[group] || ['var(--muted)', '#F3E9DC'];
-  return `<img class="${cls}" src="${iconUrl(name)}" width="${size}" height="${size}" alt="" loading="lazy" decoding="async"
-    data-fb="${esc((name[0] || '?').toUpperCase())}" data-fg="${fg}" data-bg="${bg}" style="width:${size}px;height:${size}px">`;
+  const src = iconUrl(name), alt = src.startsWith('icons/') ? codexIconUrl(name) : '';
+  return `<img class="${cls}" src="${src}" ${alt ? `data-alt="${alt}"` : ''} onerror="__imgFail(this)" width="${size}" height="${size}" alt="" loading="lazy" decoding="async"
+    data-fb=""${esc((name[0] || '?').toUpperCase())}" data-fg="${fg}" data-bg="${bg}" style="width:${size}px;height:${size}px">`;
 }
-document.addEventListener('error', (e) => {
-  const img = e.target;
-  if (img.tagName !== 'IMG' || !img.dataset.fb) return;
+/** A picture didn't load: try the codex copy, then show a lettered tile. */
+function imgFail(img) {
+  if (!img.isConnected || img.dataset.done) return;
+  if (img.dataset.alt) { const a = img.dataset.alt; delete img.dataset.alt; img.src = a; return; }
+  img.dataset.done = '1';
   const sp = document.createElement('span');
   sp.className = 'ph ' + img.className;
   sp.textContent = img.dataset.fb;
   sp.style.cssText = `${img.style.cssText};background:${img.dataset.bg};color:${img.dataset.fg};font-size:${parseInt(img.style.width) * 0.45}px`;
   img.replaceWith(sp);
+}
+window.__imgFail = imgFail;
+document.addEventListener('error', (e) => {
+  const img = e.target;
+  if (img.tagName !== 'IMG' || !img.dataset.fb) return;
+  imgFail(img);
 }, true);
 function tileIcon(name, size, group) {
   const [, bg] = GROUP_COLORS[group] || ['', '#F6EEE3'];
@@ -138,7 +147,17 @@ const infoBox = (title, text) => confirmBox(title, text, 'OK', '');
 
 // ───────── saving changes (screen first, server second) ─────────
 function rebuild() { S.model.recalc(todayISO()); }
+let iconsLoaded = false;
+async function loadLocalIcons() {
+  if (iconsLoaded) return;
+  iconsLoaded = true;
+  try {
+    const r = await fetch('icons/index.json', { cache: 'no-cache' });
+    if (r.ok) setLocalIcons((await r.json()).icons);
+  } catch { /* no saved pictures yet - the codex is used */ }
+}
 async function reloadAll() {
+  await loadLocalIcons();
   const d = await db.loadAll();
   const data = d.requests || (await (await fetch('data/seed.json')).json());
   S.model = new Model(data, d.items);
@@ -644,6 +663,7 @@ function viewMore() {
       <button class="li" data-act="update" ${S.updating ? 'disabled' : ''}><b>\u21bb Update requests</b><span class="tiny muted">${esc(updatedText())}</span></button>
       <button class="li" data-act="refresh-items" ${S.refreshing ? 'disabled' : ''}><b>\u21bb Refresh item data</b><span class="tiny muted">Rarity, types, recipes, clothing and fragments from the codex. Reads only items it hasn\u2019t read yet. ${itemsAt ? `Last read ${new Date(itemsAt).toLocaleDateString()}` : 'Not loaded yet'}</span></button>
       <button class="li" data-act="refresh-all" ${S.refreshing ? 'disabled' : ''}><b>Re-read every item</b><span class="tiny muted">Use after a game update changes existing recipes. Takes several minutes.</span></button>
+      <div class="li static"><b>Item pictures</b><span class="tiny muted">${localIconCount() ? `${fmt(localIconCount())} pictures saved on your site \u2013 they keep working even if the codex goes away.` : 'Loaded from loftiacodex.com. To keep your own copy, run \u201cSave item pictures\u201d in your GitHub repository\u2019s Actions tab (see README).'}</span></div>
       <button class="li" data-act="import"><b>Import CSV</b><span class="tiny muted">Update or replace your counts from a file</span></button>
       <button class="li" data-act="export"><b>Export CSV</b><span class="tiny muted">Download everything you own</span></button>
       <button class="li" data-act="backups"><b>Backups</b><span class="tiny muted">Restore, back up now, or use a backup file</span></button></div>

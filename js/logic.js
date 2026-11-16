@@ -31,7 +31,12 @@ export function normName(name) {
     .replace(/[^a-z0-9]+/g, ' ').trim().replace(/\s+/g, ' ');
 }
 export const slugOf = (name) => SLUG_OVERRIDE.get(name) || slugify(name);
-export const iconUrl = (name) => `https://loftiacodex.com/icons/${slugOf(name)}.webp`;
+// Pictures saved in this website's icons/ folder (by the "Save item pictures" GitHub Action) are used first.
+const LOCAL_ICONS = new Set();
+export function setLocalIcons(list) { LOCAL_ICONS.clear(); for (const s of list || []) LOCAL_ICONS.add(s); }
+export const localIconCount = () => LOCAL_ICONS.size;
+export const codexIconUrl = (name) => `https://loftiacodex.com/icons/${slugOf(name)}.webp`;
+export const iconUrl = (name) => (LOCAL_ICONS.has(slugOf(name)) ? `icons/${slugOf(name)}.webp` : codexIconUrl(name));
 export const itemUrl = (name) => `https://loftiacodex.com/items/${slugOf(name)}/`;
 
 export const CATALOG_INDEX = new Map(); // norm name -> [name, category]
