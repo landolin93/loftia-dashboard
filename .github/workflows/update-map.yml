@@ -1,0 +1,44 @@
+# Reads where every gathering spot is (districts, areas, how many) from the codex's live spot pages and saves it to
+# data/spots-live.json for the planner. Runs every Monday, or on demand from the Actions tab.
+name: Update map
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '41 7 * * 1'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-map
+  cancel-in-progress: false
+
+jobs:
+  read-map:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install a browser
+        run: |
+          pip install playwright==1.48.0
+          python -m playwright install --with-deps chromium
+      - name: Read the spot pages
+        run: python tools/read_spots.py
+      - name: Save to the repository
+        run: |
+          if [ ! -f data/spots-live.json ]; then echo "Nothing was saved this time."; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git add data/spots-live.json
+          if git diff --cached --quiet; then echo "Map unchanged."; exit 0; fi
+          git commit -m "Update gathering spot map from loftiacodex.com"
+          git pull --rebase --autostash || true
+          if ! git push; then
+            echo "::error::GitHub didn't allow the action to save. Open Settings > Actions > General, choose 'Read and write permissions' under Workflow permissions, click Save, then run this again."
+            exit 1
+          fi
