@@ -22,8 +22,8 @@ const GROUP_COLORS = {
   Wardrobe: ['var(--berry)', 'var(--berry-soft)'],
 };
 const CAT_TAG = { Materials: '', Crops: 'green', Foods: 'orange', Fishes: 'blue', Flowers: 'berry', Artifacts: 'lav', Fragments: 'berry', Clothing: 'berry', Other: '' };
-const RARITY_TAG = { Common: '', Uncommon: 'green', Rare: 'blue', 'Very rare': 'lav', Epic: 'lav', Legendary: 'orange' };
-const RARITY_STARS = { Uncommon: ['\u2605', '#5BC8D8'], Rare: ['\u2605\u2605', '#5BC8D8'], 'Very rare': ['\u2605\u2605', '#F2B632'], Epic: ['\u2605\u2605', '#F2B632'], Legendary: ['\u2605\u2605\u2605', '#F2B632'] };
+const RARITY_TAG = { Common: '', Uncommon: 'green', Rare: 'blue', 'Very rare': 'lav', Personal: 'personal', Premium: 'premium', Epic: 'lav', Legendary: 'orange' };
+const RARITY_STARS = { Personal: ['\u{1F512}', '#9C6B3C'], Premium: ['\u{1F512}', '#B58A1B'], Uncommon: ['\u2605', '#5BC8D8'], Rare: ['\u2605\u2605', '#5BC8D8'], 'Very rare': ['\u2605\u2605', '#F2B632'], Epic: ['\u2605\u2605', '#F2B632'], Legendary: ['\u2605\u2605\u2605', '#F2B632'] };
 const TABS = [['Home', 'Spotless Game Guy'], ['Items', 'Gears'], ['Tasks', "Used Gone Fishin'"], ['Bins', 'Carrot Cake'], ['More', 'Used Rubber Duck']];
 const MORE_PAGES = ['Clothing progress', 'Shopping List', 'Floating Village', 'Global Village', 'Museum', 'Cooking Ingredients', 'All Items', 'Daily Schedule', 'Recipes'];
 const PAGE_ICONS = {
@@ -100,7 +100,7 @@ S.ui.items = Object.assign({ search: '', tab: 'Materials', owned: false, sort: '
 S.ui.listSort = S.ui.listSort || 'need';
 if (S.ui.items.sort === 'rarity') S.ui.items.sort = S.ui.items.dir < 0 ? 'rarity-down' : 'rarity-up';
 S.ui.recSort = S.ui.recSort || 'az';
-const RARITY_ORDER = ['Common', 'Uncommon', 'Rare', 'Very rare', 'Epic', 'Legendary'];
+const RARITY_ORDER = ['Common', 'Uncommon', 'Rare', 'Very rare', 'Personal', 'Premium', 'Epic', 'Legendary'];
 const CLOTHING_PARTS = ['Hats', 'Tops', 'Bottoms', 'Shoes', 'Accessories', 'Walk Trails'];
 S.ui.search = ''; S.ui.items.search = '';
 const persist = () => localStorage.setItem('loftia-ui', JSON.stringify({ view: S.view, ui: S.ui }));
@@ -419,7 +419,8 @@ function renderSheet() {
   const where = [info.location, info.district].filter(Boolean).join(', ');
   const chips = [`<span class="tag ${CAT_TAG[cat] || ''}">${esc(TAB_LABEL[cat] || cat)}</span>`, m.sub.get(name) && m.sub.get(name) !== cat ? `<span class="tag">${esc(m.sub.get(name))}</span>` : '',
     item ? `<span class="tag">${esc(item.method)}</span>` : '', m.station(item) ? `<span class="tag blue">Station Lv ${m.station(item)}</span>` : '',
-    rarityTag(rarityOf(name)), det.type ? `<span class="tag">${esc(det.type)}</span>` : ''].join('');
+    rarityTag(rarityOf(name)), det.type ? `<span class="tag">${esc(det.type)}</span>` : '', det.theme ? `<span class="tag">Theme: ${esc(det.theme)}</span>` : ''].join('');
+  const untradable = ['Personal', 'Premium'].includes(rarityOf(name));
   let need = '';
   if (item && m.required(item)) {
     const req = m.required(item), ms = m.missing(item), pct = Math.round((100 * Math.min(have, req)) / req);
@@ -461,7 +462,8 @@ function renderSheet() {
     if (reqs.length) rel = `<div class="sec"><b class="small">Bin requests</b>${reqs.map((r) => `<div class="req-row small"><span class="grow">${shortDate(r.date)} \u00b7 ${esc(r.bin)}</span><b>\u00d7${r.quantity}${m.binDone(r.date, r.bin) ? ' \u2713' : ''}</b></div>`).join('')}</div>`;
   }
   body.innerHTML = `<div class="sh-head">${tileIcon(name, 84, g)}<div><h3>${esc(name)}</h3><div class="chips">${chips}</div>
-      ${where ? `<div class="tiny muted" style="margin-top:6px">Found at ${esc(where)}</div>` : ''}</div></div>
+      ${where ? `<div class="tiny muted" style="margin-top:6px">Found at ${esc(where)}</div>` : ''}
+      ${untradable ? `<div class="tiny" style="margin-top:6px;color:#9C6B3C;font-weight:800">\u{1F512} ${esc(rarityOf(name))} item \u2013 it can\u2019t be given away</div>` : ''}</div></div>
     ${need}${pieces}${qty}${make}${recycle}${rel}
     <div class="sec" style="border:0"><a class="linkish small" href="${itemUrl(name)}" target="_blank" rel="noopener">Open on loftiacodex.com \u2197</a></div>`;
 }
@@ -529,12 +531,12 @@ function fillList() {
 function viewBins() {
   const m = S.model, dates = m.dates(), today = todayISO();
   if (!dates.length) return '<div class="card empty">No bin requests loaded \u2013 press Update requests.</div>';
-  if (!dates.includes(S.ui.binDay)) S.ui.binDay = dates.find((d) => d >= today) || dates[dates.length - 1];
+  if (!dates.includes(S.ui.binDay)) S.ui.binDay = dates.includes(today) ? today : (dates.find((d) => d >= today) || dates[dates.length - 1]);
   const day = S.ui.binDay;
   const chips = dates.map((d) => {
     const bins = [...new Set(m.schedule.filter((r) => r.date === d).map((r) => r.bin))];
     const done = bins.filter((b) => m.binDone(d, b)).length;
-    return `<button class="chip ${d === day ? 'on' : ''}" data-act="bin-day" data-d="${d}">${shortDate(d)}${d === today ? ' (today)' : ''}<span class="n">${done < bins.length ? `${done}/${bins.length}` : '\u2713'}</span></button>`;
+    return `<button class="chip ${d === day ? 'on' : ''} ${d < today ? 'past' : ''}" data-act="bin-day" data-d="${d}">${d === today ? 'Today' : shortDate(d)}<span class="n">${done < bins.length ? `${done}/${bins.length}` : '\u2713'}</span></button>`;
   }).join('');
   const open = m.openBins(day), expired = m.isExpired(day), ready = open.filter((b) => m.binReady(day, b));
   const note = expired ? 'This day has passed \u2013 requests that weren\u2019t marked done have expired.'
@@ -566,12 +568,11 @@ function binCard(day, bin) {
     const [c, q] = m.binCover(day, bin, e.key);
     return tile({ k: e.key, count: `\u00d7${e.qty}`, badge: c >= q ? '\u2713' : `${c}/${q}`, badgeCls: c >= q ? 'green' : 'orange' });
   }).join('');
-  let foot = '';
-  if (done) foot = `<span class="tiny" style="color:#8FB89A">Items removed from your bag</span><button class="btn small" data-act="undo-bin" data-d="${day}" data-b="${esc(bin)}">Undo</button>`;
-  else if (entries.length && !expired && ready) foot = `<button class="btn primary small" data-act="mark-bin" data-d="${day}" data-b="${esc(bin)}">\u2713 Mark bin done</button>`;
-  else if (entries.length && !expired) foot = `<span class="tiny muted">Collect ${plural(short, 'more item')} to finish this bin</span>`;
-  return `<div class="card bin ${done ? 'done' : ''}"><div class="head"><span class="tag" style="background:${soft};color:${fg}">${esc(lv)}</span><b>${esc(loc)}</b>${chip}</div>
-    ${entries.length ? `<div class="inv-grid xs">${ents}</div>` : '<div class="small muted">No requests this day</div>'}<div class="foot">${foot}</div></div>`;
+  let act = '';
+  if (done) act = `<button class="btn small" data-act="undo-bin" data-d="${day}" data-b="${esc(bin)}" title="Put the items back in your bag">Undo</button>`;
+  else if (entries.length && !expired) act = `<button class="btn small ${ready ? 'primary' : ''}" data-act="mark-bin" data-d="${day}" data-b="${esc(bin)}" ${ready ? '' : `disabled title="Collect ${short} more first"`}>\u2713 Done</button>`;
+  return `<div class="card bin ${done ? 'done' : ''} ${expired ? 'expired' : ''}"><div class="head"><span class="tag" style="background:${soft};color:${fg}">${esc(lv)}</span><b>${esc(loc)}</b>${chip}</div>
+    ${entries.length ? `<div class="bin-body"><div class="bin-tiles">${ents}</div>${act ? `<div class="bin-act">${act}</div>` : ''}</div>` : '<div class="small muted">No requests this day</div>'}</div>`;
 }
 
 // ───────── Tasks ─────────
@@ -839,7 +840,7 @@ async function refreshItemData(all = false) {
   try {
     const cat = await db.itemCatalog();
     const known = S.model.itemsData?.details || {};
-    const todo = (cat.todo || []).filter((slug) => all || !known[slug] || known[slug].v !== cat.version);
+    const todo = (cat.todo || []).filter((slug) => all || !known[slug] || known[slug].v !== cat.version || !known[slug].rarity);
     let done = 0;
     const failedList = [];
     for (let i = 0; i < todo.length && !stop; i += 15) {

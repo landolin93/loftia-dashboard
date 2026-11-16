@@ -5,7 +5,8 @@ import {
 
 export const GROUPS = ['Floating Village', 'Global Village', 'Museum', 'Cooking Ingredients'];
 export const TASK_GROUPS = ['Floating Village', 'Museum'];
-export const RARITIES = ['Common', 'Uncommon', 'Rare', 'Very rare', 'Epic', 'Legendary']; // easiest -> hardest
+export const RARITIES = ['Common', 'Uncommon', 'Rare', 'Very rare', 'Personal', 'Premium', 'Epic', 'Legendary']; // easiest -> hardest
+export const UNTRADABLE = ['Personal', 'Premium'];   // can't be given away
 export const CATEGORIES = Object.keys(CATALOG);
 export const CATEGORY_GROUP = {
   Materials: 'Cooking Ingredients', Crops: 'Cooking Ingredients', Flowers: 'Cooking Ingredients',
