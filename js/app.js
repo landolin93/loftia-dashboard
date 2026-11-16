@@ -169,7 +169,9 @@ async function reloadAll() {
   await loadLocalIcons();
   const d = await db.loadAll();
   const data = d.requests || (await (await fetch('data/seed.json')).json());
-  S.model = new Model(data, d.items);
+  let map = null;   // where every gathering spot is, saved by the "Update map" GitHub action
+  try { const r = await fetch('data/spots-live.json', { cache: 'no-cache' }); if (r.ok) map = await r.json(); } catch { /* not there yet */ }
+  S.model = new Model(data, d.items, map);
   S.model.setState({ inventory: d.inventory, completions: d.completions });
   S.finds = d.finds;
   S._db = null;
@@ -475,6 +477,12 @@ function renderSheet() {
   const recycle = rec.length ? `<div class="sec"><b class="small">Recycle into</b><div class="ing-list">${rec.map((x) => `<div class="ing">${icon(x.name, 30, groupOfCat(m.categoryOf(x.name)))}<span class="grow">${esc(x.name)}</span><span class="tiny">\u00d7${x.qty * sh.recN}</span></div>`).join('')}</div>
     <div class="make-row"><div class="stepper"><button class="btn" data-act="rec-n" data-d="-1" aria-label="Fewer">\u2212</button><b>${sh.recN}</b><button class="btn" data-act="rec-n" data-d="1" aria-label="More">+</button></div>
       <button class="btn" data-act="sheet-recycle" ${have >= sh.recN ? '' : 'disabled'}>Recycle ${sh.recN}</button></div></div>` : '';
+  const places = m.spotsFor(name);
+  const whereSec = places.length ? `<div class="sec"><div class="row-h"><b class="small">Where to find it</b><span class="tiny muted">best first</span></div>
+    <div class="ing-list">${places.slice(0, S.sheet.allSpots ? 60 : 6).map((p) => p.kind === 'spot'
+      ? `<div class="ing"><span class="grow"><b>${esc(p.spotName)}</b><span class="tiny muted" style="display:block">${esc([p.district, p.area ? areaWord(p.area) : '', p.count ? `${p.count} spots` : ''].filter(Boolean).join(' \u00b7 ') || 'location on the map not read yet')}${p.tool ? ` \u00b7 ${esc(p.tool)}` : ''}${p.respawn ? ` \u00b7 back in ${esc(p.respawn)}` : ''}</span></span><b class="small">\u00d7${p.min === p.max ? p.max : `${p.min}\u2013${p.max}`}</b></div>`
+      : `<div class="ing"><span class="grow"><b>${esc(p.location || p.district)}</b><span class="tiny muted" style="display:block">${esc(p.location ? p.district : '')}</span></span></div>`).join('')}</div>
+    ${places.length > 6 ? `<button class="linkish small" data-act="sheet-spots">${S.sheet.allSpots ? 'Show fewer' : `Show all ${places.length} places`}</button>` : ''}</div>` : '';
   let rel = '';
   if (item && item.group === 'Cooking Ingredients') {
     const uses = m.usesOf(name);
@@ -486,7 +494,7 @@ function renderSheet() {
   body.innerHTML = `<div class="sh-head">${tileIcon(name, 84, g)}<div><h3>${esc(name)}</h3><div class="chips">${chips}</div>
       ${where ? `<div class="tiny muted" style="margin-top:6px">Found at ${esc(where)}</div>` : ''}
       ${untradable ? `<div class="tiny" style="margin-top:6px;color:#9C6B3C;font-weight:800">\u{1F512} ${esc(rarityOf(name))} item \u2013 it can\u2019t be given away</div>` : ''}</div></div>
-    ${need}${pieces}${qty}${make}${recycle}${rel}
+    ${need}${pieces}${qty}${whereSec}${make}${recycle}${rel}
     <div class="sec" style="border:0"><a class="linkish small" href="${itemUrl(name)}" target="_blank" rel="noopener">Open on loftiacodex.com \u2197</a></div>`;
 }
 async function sheetSave() {
@@ -615,7 +623,8 @@ function taskSub(t) {
   if (t.location) parts.push(`find these at ${t.location}`);
   if (t.spots && t.spots.length) {
     const tools = [...new Set(t.spots.map((sp) => sp.tool).filter(Boolean))];
-    parts.push(`hit ${t.spots.map((sp) => sp.name).join(', ')}${tools.length ? ` (${tools.join(', ')})` : ''}`);
+    const shown = t.spots.slice(0, 4).map((sp) => `${sp.name}${sp.count ? ` (${sp.count} here)` : ''}`);
+    parts.push(`hit ${shown.join(', ')}${t.spots.length > 4 ? ` +${t.spots.length - 4} more` : ''}${tools.length ? ` \u00b7 ${tools.join(', ')}` : ''}`);
   }
   return parts.join(' \u00b7 ') || 'the exact spot isn\u2019t listed on the codex';
 }
@@ -823,6 +832,7 @@ function viewMore() {
       <button class="li" data-act="update" ${S.updating ? 'disabled' : ''}><b>\u21bb Update requests</b><span class="tiny muted">${esc(updatedText())}${S.model.data?.source ? ` \u00b7 from the ${esc(S.model.data.source)}` : ''}</span></button>
       <button class="li" data-act="refresh-items" ${S.refreshing ? 'disabled' : ''}><b>\u21bb Refresh item data</b><span class="tiny muted">Rarity, types, recipes, clothing and fragments from the codex. Reads only items it hasn\u2019t read yet. ${itemsAt ? `Last read ${new Date(itemsAt).toLocaleDateString()}` : 'Not loaded yet'}</span></button>
       <button class="li" data-act="refresh-all" ${S.refreshing ? 'disabled' : ''}><b>Re-read every item</b><span class="tiny muted">Use after a game update changes existing recipes. Takes several minutes.</span></button>
+      <div class="li static"><b>Gathering spot map</b><span class="tiny muted">${S.model.spotsLiveRaw?.generated_at ? `Read ${new Date(S.model.spotsLiveRaw.generated_at).toLocaleDateString()} \u2013 ${fmt(Object.keys(S.model.spotsLive).length)} spots with their districts.` : 'Not read yet. Run \u201cUpdate map\u201d in your GitHub repository\u2019s Actions tab (see README) so stops can name the district for each area.'}</span></div>
       <div class="li static"><b>Item pictures</b><span class="tiny muted">${localIconCount() ? `${fmt(localIconCount())} pictures saved on your site \u2013 they keep working even if the codex goes away.` : 'Loaded from loftiacodex.com. To keep your own copy, run \u201cSave item pictures\u201d in your GitHub repository\u2019s Actions tab (see README).'}</span></div>
       <button class="li" data-act="import"><b>Import CSV</b><span class="tiny muted">Update or replace your counts from a file</span></button>
       <button class="li" data-act="export"><b>Export CSV</b><span class="tiny muted">Download everything you own</span></button>
@@ -844,6 +854,7 @@ const ACT = {
   'open-bins': (d) => { if (d.d) S.ui.binDay = d.d; go('Bins'); },
   open: (d, el) => openSheet(d.key, el.dataset.ctx || null),
   'sheet-close': () => closeSheet(),
+  'sheet-spots': () => { S.sheet.allSpots = !S.sheet.allSpots; renderSheet(); },
   'sheet-mode': (d) => { S.sheet.mode = d.v; renderSheet(); if (matchMedia('(pointer: fine)').matches) $('#sh-qty')?.focus(); },
   'sheet-save': () => sheetSave(),
   'sheet-delta': (d) => { const k = S.sheet.key; setCounts([{ item_key: k, have: S.model.get(k) + Number(d.d) }]); },
@@ -980,7 +991,7 @@ async function runUpdate(live = null) {
     const before = JSON.stringify(S.model.schedule.map((r) => [r.date, r.bin, r.name, r.quantity]).sort());
     const data = await db.runUpdate(todayISO(), Object.keys(RECIPE_BOOK), live);
     const old = S.model;
-    S.model = new Model(data, old.itemsData);
+    S.model = new Model(data, old.itemsData, old.spotsLiveRaw);
     S.model.have = old.have; S.model.completions = old.completions; S.model.done = old.done;
     S.model.recalc(todayISO());
     S._db = null; S.updateError = null; S.updating = false;

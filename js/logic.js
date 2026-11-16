@@ -46,6 +46,13 @@ for (const [cat, names] of Object.entries(CATALOG)) {
 }
 export const ALL_CATALOG_NAMES = [...CATALOG_INDEX.values()].map((v) => v[0]).sort((a, b) => a.localeCompare(b));
 
+/** "5 min" -> 5, "2 h" -> 120, unknown -> a large number */
+export function respawnMinutes(t) {
+  const m = /(\d+)\s*(s|sec|min|h|hour|day)/i.exec(String(t || ''));
+  if (!m) return 1e6;
+  const n = Number(m[1]), u = m[2].toLowerCase();
+  return u.startsWith('s') ? n / 60 : u.startsWith('min') ? n : u.startsWith('h') ? n * 60 : n * 1440;
+}
 export function todayISO(d = new Date()) {
   const p = (n) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
@@ -67,8 +74,9 @@ export function rangeText(a, b) {
 
 /** The working model: item list built from the bin requests, plus your counts. */
 export class Model {
-  constructor(data, itemsData = null) {
+  constructor(data, itemsData = null, spotsLive = null) {
     this.itemsData = itemsData || { catalog: [], details: {} };
+    this.spotsLiveRaw = spotsLive || null;
     this._buildCatalog();
     this.data = data || { schedule: [] };
     this.schedule = (this.data.schedule || []).slice();
@@ -147,6 +155,9 @@ export class Model {
     const details = this.itemsData.details || {};
     this.detailsBySlug = details;
     this.spots = this.itemsData.spots || {};
+    this.spotsLive = (this.spotsLiveRaw && this.spotsLiveRaw.spots) || {};
+    this.areaNames = new Set();
+    for (const sp of Object.values(this.spots)) for (const d of sp.drops || []) if (d.area) this.areaNames.add(d.area.toLowerCase());
     // full district names ("gridfall" -> "The Gridfall") from item pages
     this.districtNames = new Map();
     for (const d of Object.values(details)) if (d && d.district) this.districtNames.set(d.district.toLowerCase().replace(/^the\s+/, '').replace(/[^a-z0-9]+/g, '-'), d.district);
@@ -386,15 +397,34 @@ export class Model {
     const k = String(hint).toLowerCase().replace(/^the\s+/, '').replace(/[^a-z0-9]+/g, '-');
     return this.districtNames.get(k) || String(hint).replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
   }
+  /** Where a spot is, from the live map: [{district, area, count}] (area rows set the context for district rows). */
+  whereOf(slug) {
+    const live = this.spotsLive[slug];
+    if (!live || !live.where) return [];
+    const out = [];
+    let area = '';
+    for (const r of live.where) {
+      const label = String(r.label || '').trim();
+      const bare = label.toLowerCase().replace(/\s+area$/, '');
+      if (this.areaNames.has(bare)) { area = label.replace(/\s+area$/i, ''); if (r.count != null) out.push({ district: '', area, count: r.count }); continue; }
+      out.push({ district: this.districtName(label), area, count: r.count != null ? r.count : null });
+    }
+    return out;
+  }
   sourcesFor(name) {
     const det = this.details(name), slug = slugOf(name), out = [];
     for (const g of det.gather || []) {
       const sp = this.spots[g.slug];
       const areas = sp && sp.drops ? [...new Set(sp.drops.filter((d) => d.slug === slug).map((d) => d.area))] : [];
+      const where = this.whereOf(g.slug);
       for (const area of areas.length ? areas : [null]) {
-        out.push({ kind: 'spot', spot: g.slug, spotName: g.name || (sp && sp.name) || g.slug, area,
-          district: this.districtName(g.district || det.district || ''),
-          min: g.min || 1, max: g.max || g.min || 1, tool: (sp && sp.tool) || '' });
+        const base = { kind: 'spot', spot: g.slug, spotName: g.name || (sp && sp.name) || g.slug, area,
+          min: g.min || 1, max: g.max || g.min || 1, tool: (sp && sp.tool) || '', respawn: (sp && sp.respawn) || '' };
+        // live map: one source per district that has this spot (in the right area, if the drop needs one)
+        const hint = g.district ? this.districtName(g.district) : '';
+        const spots = where.filter((w) => w.district && (!area || !w.area || w.area.toLowerCase() === String(area).toLowerCase()) && (!hint || w.district === hint));
+        if (spots.length) for (const w of spots) out.push({ ...base, district: w.district, count: w.count });
+        else out.push({ ...base, district: this.districtName(g.district || det.district || ''), count: null });
       }
     }
     if (!out.length) {
@@ -402,6 +432,13 @@ export class Model {
       if (loc || dis) out.push({ kind: 'place', location: loc, district: dis });
     }
     return out;
+  }
+  /** Rarer items are harder to come by, so they count a little more when choosing where to go. */
+  rarityBoost(name) { const r = this.rarityRank(name); return r < RARITIES.length ? 1 + 0.25 * Math.min(r, 3) : 1; }
+  /** Every place an item can be found, best first (most per visit, most spots, quickest respawn). */
+  spotsFor(name) {
+    return this.sourcesFor(name).sort((a, b) => ((b.min + b.max) || 0) - ((a.min + a.max) || 0) || (b.count || 0) - (a.count || 0)
+      || respawnMinutes(a.respawn) - respawnMinutes(b.respawn) || String(a.spotName || a.location).localeCompare(String(b.spotName || b.location)));
   }
   /** How useful an item is as a "bonus find": bins first, then clothing you're close to, then the shopping list, then rarity. */
   bonusValue(k, name, basic) {
@@ -431,8 +468,14 @@ export class Model {
           if (!P.spots.has(src.spot)) P.spots.set(src.spot, { slug: src.spot, name: src.spotName, tool: src.tool, keys: new Set() });
           P.spots.get(src.spot).keys.add(t.key);
         }
-        const it = P.items.get(t.key) || { t, min: 0, max: 0 };
+        if (src.kind === 'spot') {
+          const sp = P.spots.get(src.spot);
+          sp.count = Math.max(sp.count || 0, src.count || 0); sp.respawn = src.respawn;
+          sp.yield = (sp.yield || 0) + ((src.min || 1) + (src.max || 1)) / 2;
+        }
+        const it = P.items.get(t.key) || { t, min: 0, max: 0, nodes: 0 };
         it.min = Math.max(it.min, src.min || 0); it.max = Math.max(it.max, src.max || 0);
+        it.nodes = Math.max(it.nodes, src.count || 0);
         P.items.set(t.key, it);
       }
     }
@@ -442,7 +485,8 @@ export class Model {
       // Go where the soonest-due bin item is first (bins come first), then where the most weight is.
       for (const P of places.values()) {
         let w = 0, n = 0, due = '9999';
-        for (const [k, it] of P.items) if (remaining.has(k)) { w += it.t.weight; n++; if (it.t.due && it.t.due < due) due = it.t.due; }
+        // more of the spot in a district = more chances: a gentle boost from the live map counts
+        for (const [k, it] of P.items) if (remaining.has(k)) { w += it.t.weight * (1 + 0.15 * Math.log2(1 + (it.nodes || 0))); n++; if (it.t.due && it.t.due < due) due = it.t.due; }
         if (!n) continue;
         if (!best || due < best.due || (due === best.due && (w > best.w || (w === best.w && n > best.n)))) best = { P, w, n, due };
       }
@@ -450,8 +494,10 @@ export class Model {
       const P = best.P;
       const items = [...P.items.values()].filter((it) => remaining.has(it.t.key)).sort((a, b) => b.t.weight - a.t.weight);
       for (const it of items) remaining.delete(it.t.key);
+      // best spots first: most of your items, then most per visit, then most of them here, then quickest respawn
       const spots = [...P.spots.values()].map((sp) => ({ ...sp, n: items.filter((it) => sp.keys.has(it.t.key)).length }))
-        .filter((sp) => sp.n).sort((a, b) => b.n - a.n || a.name.localeCompare(b.name));
+        .filter((sp) => sp.n).sort((a, b) => b.n - a.n || (b.yield || 0) - (a.yield || 0) || (b.count || 0) - (a.count || 0)
+          || respawnMinutes(a.respawn) - respawnMinutes(b.respawn) || a.name.localeCompare(b.name));
       steps.push({ district: P.district, area: P.area, location: P.location, spots, items, weight: best.w });
     }
     const taken = new Set(targets.map((t) => t.key));
@@ -478,7 +524,7 @@ export class Model {
     if (mode === 'all') {
       for (const [k, need] of this.poolNeed(groups)) {
         const [g, n] = splitKey(k), short = need - this.get(k);
-        if (short > 0) per.set(k, { key: k, group: g, name: n, short, due: '', bins: [], weight: 10 + short });
+        if (short > 0) per.set(k, { key: k, group: g, name: n, short, due: '', bins: [], weight: (10 + short) * this.rarityBoost(n) });
       }
       return [...per.values()];
     }
@@ -494,7 +540,7 @@ export class Model {
         e.bins.push([d, b, q - c]);
       }
     }
-    for (const e of per.values()) e.weight = 1000 / (1 + Math.max(0, daysBetween(this.today, e.due))) + e.short;
+    for (const e of per.values()) e.weight = (1000 / (1 + Math.max(0, daysBetween(this.today, e.due))) + e.short) * this.rarityBoost(e.name);
     return [...per.values()];
   }
   /** What you've picked to look for (plus anything the bins need from it) as planner targets. */
@@ -503,7 +549,7 @@ export class Model {
       const [g, n] = splitKey(k), item = this.byKey.get(k), p = this.pieceOf.get(n);
       const short = p ? Math.max(1, p.qty - this.get(k)) : item && this.missing(item) > 0 ? this.missing(item) : 1;
       const binW = item && item.group !== 'Cooking Ingredients' && this.missing(item) > 0 ? 500 : 0;
-      return { key: k, group: g, name: n, short, due: '', bins: [], weight: 50 + binW + short };
+      return { key: k, group: g, name: n, short, due: '', bins: [], weight: (50 + binW + short) * this.rarityBoost(n) };
     });
   }
   /** Task list: one task per place to visit. */
