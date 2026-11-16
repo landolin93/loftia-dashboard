@@ -17,6 +17,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from playwright.sync_api import sync_playwright
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import read_bins
 from read_bins import SITE, download, serve   # same plain-download + local browser approach as the bin reader
 
 OUT = os.environ.get('OUT_FILE', 'data/spots-live.json')
@@ -24,6 +25,16 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 WAIT_MS = int(os.environ.get('WAIT_MS', '20000'))
 DISCOVERY_BUDGET = int(os.environ.get('DISCOVERY_SECONDS', '1200'))   # stop looking for new spots after 20 minutes
 CATEGORIES = {'materials', 'crops', 'flowers', 'artifacts', 'item fragments'}
+
+
+SECTION_SNAPSHOT = r"""() => {
+  const h = [...document.querySelectorAll('h1,h2,h3')].find((x) => /where to find it/i.test(x.textContent));
+  if (!h) return '(no "Where to find it" heading)';
+  let html = '';
+  for (let el = h.nextElementSibling, k = 0; el && k < 6 && !/^H[12]$/.test(el.tagName); el = el.nextElementSibling, k++) html += el.outerHTML;
+  if (!html && h.parentElement) html = h.parentElement.outerHTML;
+  return html.replace(/\s+/g, ' ').slice(0, 1500) || '(nothing after the heading)';
+}"""
 
 
 def item_slugs(list_html):
@@ -110,7 +121,7 @@ def main():
         print('No spots found - the item pages could not be read. The last saved map is kept.'); sys.exit(1)
     reader = open(os.path.join(HERE, 'spot-page-reader.js'), encoding='utf-8').read()
     ready = '() => { try { const r = ' + reader.strip().rstrip(';') + '; return r.found && r.lines.length > 0; } catch (e) { return false; } }'
-    out, failed, shown = {}, [], False
+    out, failed, shown = {}, [], 0
     with sync_playwright() as p:
         browser = p.chromium.launch()
         page = browser.new_page()
@@ -129,10 +140,13 @@ def main():
                 res = page.evaluate(reader)
                 rows = parse_where(res.get('lines') or [], res.get('links') or [])
                 if not rows:
-                    if not shown:
+                    if shown < 2:   # show what an empty page looked like (twice), to adjust the reader
+                        snap = page.evaluate(SECTION_SNAPSHOT)
                         print(f'---- what /spots/{slug}/ looked like (send this to Claude if the map stays empty) ----')
-                        print('lines:', res.get('lines')); print('links:', res.get('links')); print('----')
-                        shown = True
+                        print('section code:', snap)
+                        print('addresses not loaded:', read_bins.blocked[-8:] or 'none')
+                        print('----')
+                        shown += 1
                     raise RuntimeError('"Where to find it" stayed empty')
                 out[slug] = {'name': page.title().split(' -- ')[0].strip(), 'where': rows}
                 print(f'OK   [{len(out)}/{len(spots)}] {slug}: ' + ', '.join(f"{r['label']}{' ' + str(r['count']) if r['count'] is not None else ''}" for r in rows[:6]))

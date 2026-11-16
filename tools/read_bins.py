@@ -74,14 +74,24 @@ def download(url, tries=3):
     return res
 
 
+TRACKERS = re.compile(r'google-analytics|googletagmanager|doubleclick|cloudflareinsights|plausible|umami|hotjar|clarity\.ms|facebook|segment\.(io|com)|sentry')
+blocked = []   # addresses that were not loaded (shown in the log when a page comes up empty)
+
+
 def serve(route):
+    """Every file the page asks for is fetched with a plain download and handed to the browser.
+    Pictures, fonts, media and trackers are skipped - they aren't needed to work out the data."""
     req = route.request
     url = req.url
-    if not url.startswith(SITE) or req.method != 'GET' or req.resource_type in ('image', 'font', 'media'):
-        return route.abort()   # pictures, fonts and outside services aren't needed to work out the week
+    if req.method != 'GET' or req.resource_type in ('image', 'font', 'media') or TRACKERS.search(url) or not url.startswith('http'):
+        return route.abort()
     try:
         status, ctype, body = download(url)
-    except Exception:   # noqa: BLE001 - a script that won't download just gets skipped
+    except Exception:   # noqa: BLE001
+        status = 599
+    if status >= 400:
+        if not url.startswith(SITE):
+            blocked.append(f'{url[:120]} ({status})')
         return route.abort()
     route.fulfill(status=status, headers={'Content-Type': ctype, 'Access-Control-Allow-Origin': '*'}, body=body)
 
