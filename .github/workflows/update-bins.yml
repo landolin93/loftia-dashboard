@@ -1,5 +1,7 @@
-# Reads the live bin requests from loftiacodex.com with a real browser and saves them to data/requests-live.json.
-# The website's "Update requests" button uses this file first. Runs every 4 hours, or on demand from the Actions tab.
+# Reads the live bin requests (today + 6 days) for the nine codex bins and saves them to data/requests-live.json.
+# Pages and the codex's own scripts are downloaded the plain way (like the picture saver), then run in a browser
+# on GitHub's machine that never contacts the codex itself. The website's "Update requests" button uses this file.
+# Runs every 4 hours, or on demand from the Actions tab.
 name: Update bin requests
 
 on:
@@ -19,17 +21,16 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-python@v5
         with:
-          node-version: 22
+          python-version: '3.12'
       - name: Install a browser
         run: |
-          npm install --no-save --no-package-lock playwright@1.48.2
-          npx playwright install --with-deps chromium
+          pip install playwright==1.48.0
+          python -m playwright install --with-deps chromium
       - name: Read the bin pages
-        run: node tools/read-bins.mjs
+        run: python tools/read_bins.py
       - name: Save to the repository
-        if: success()
         run: |
           if [ ! -f data/requests-live.json ]; then echo "Nothing was saved this time."; exit 0; fi
           git config user.name "github-actions[bot]"
