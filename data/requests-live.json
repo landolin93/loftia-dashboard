@@ -1,0 +1,3673 @@
+{
+ "generated_at": "2026-11-16T16:20:21+00:00",
+ "today": "2026-11-16",
+ "schedule": [
+  {
+   "date": "2026-11-16",
+   "group": "Floating Village",
+   "bin": "Floating Village Lv.1",
+   "name": "Atlantic Sturgeon",
+   "quantity": 3
+  },
+  {
+   "date": "2026-11-16",
+   "group": "Floating Village",
+   "bin": "Floating Village Lv.1",
+   "name": "Atlantic Salmon",
+   "quantity": 4
+  },
+  {
+   "date": "2026-11-17",
+   "group": "Floating Village",
+   "bin": "Floating Village Lv.1",
+   "name": "Southern Bluefin Tuna",
+   "quantity": 2
+  },
+  {
+   "date": "2026-11-17",
+   "group": "Floating Village",
+   "bin": "Floating Village Lv.1",
+   "name": "Seventyfour Seabream",
+   "quantity": 3
+  },
+  {
+   "date": "2026-11-18",
+   "group": "Floating Village",
+   "bin": "Floating Village Lv.1",
+   "name": "Atlantic Sturgeon",
+   "quantity": 3
+  },
+  {
+   "date": "2026-11-18",
+   "group": "Floating Village",
+   "bin": "Floating Village Lv.1",
+   "name": "Atlantic Salmon",
+   "quantity": 4
+  },
+  {
+   "date": "2026-11-19",
+   "group": "Floating Village",
+   "bin": "Floating Village Lv.1",
+   "name": "Bahia Brain Coral",
+   "quantity": 2
+  },
+  {
+   "date": "2026-11-19",
+   "group": "Floating Village",
+   "bin": "Floating Village Lv.1",
+   "name": "Nassau Grouper",
+   "quantity": 3
+  },
+  {
+   "date": "2026-11-20",
+   "group": "Floating Village",
+   "bin": "Floating Village Lv.1",
+   "name": "Japanese Spiky Sea Cucumber",
+   "quantity": 2
+  },
+  {
+   "date": "2026-11-20",
+   "group": "Floating Village",
+   "bin": "Floating Village Lv.1",
+   "name": "Rainbow Trout",
+   "quantity": 3
+  },
+  {
+   "date": "2026-11-21",
+   "group": "Floating Village",
+   "bin": "Floating Village Lv.1",
+   "name": "Atlantic Sturgeon",
+   "quantity": 3
+  },
+  {
+   "date": "2026-11-21",
+   "group": "Floating Village",
+   "bin": "Floating Village Lv.1",
+   "name": "Atlantic Salmon",
+   "quantity": 4
+  },
+  {
+   "date": "2026-11-22",
+   "group": "Floating Village",
+   "bin": "Floating Village Lv.1",
+   "name": "Ivell's Sea Anemone",
+   "quantity": 2
+  },
+  {
+   "date": "2026-11-22",
+   "group": "Floating Village",
+   "bin": "Floating Village Lv.1",
+   "name": "Atlantic Salmon",
+   "quantity": 4
+  },
+  {
+   "date": "2026-11-16",
+   "group": "Floating Village",
+   "bin": "Floating Village Lv.2",
+   "name": "Spring Pygmy Sunfish",
+   "quantity": 3
+  },
+  {
+   "date": "2026-11-16",
+   "group": "Floating Village",
+   "bin": "Floating Village Lv.2",
+   "name": "Red Handfish",
+   "quantity": 3
+  },
+  {
+   "date": "2026-11-17",
+   "group": "Floating Village",
+   "bin": "Floating Village Lv.2",
+   "name": "Bia Goby",
+   "quantity": 3
+  },
+  {
+   "date": "2026-11-17",
+   "group": "Floating Village",
+   "bin": "Floating Village Lv.2",
+   "name": "Moapa Dace",
+   "quantity": 3
+  },
+  {
+   "date": "2026-11-18",
+   "group": "Floating Village",
+   "bin": "Floating Village Lv.2",
+   "name": "Bia Goby",
+   "quantity": 3
+  },
+  {
+   "date": "2026-11-18",
+   "group": "Floating Village",
+   "bin": "Floating Village Lv.2",
+   "name": "Green Turtle",
+   "quantity": 3
+  },
+  {
+   "date": "2026-11-19",
+   "group": "Floating Village",
+   "bin": "Floating Village Lv.2",
+   "name": "Spring Pygmy Sunfish",
+   "quantity": 3
+  },
+  {
+   "date": "2026-11-19",
+   "group": "Floating Village",
+   "bin": "Floating Village Lv.2",
+   "name": "Red Handfish",
+   "quantity": 3
+  },
+  {
+   "date": "2026-11-20",
+   "group": "Floating Village",
+   "bin": "Floating Village Lv.2",
+   "name": "Spring Pygmy Sunfish",
+   "quantity": 3
+  },
+  {
+   "date": "2026-11-20",
+   "group": "Floating Village",
+   "bin": "Floating Village Lv.2",
+   "name": "Red Handfish",
+   "quantity": 3
+  },
+  {
+   "date": "2026-11-21",
+   "group": "Floating Village",
+   "bin": "Floating Village Lv.2",
+   "name": "Spring Pygmy Sunfish",
+   "quantity": 3
+  },
+  {
+   "date": "2026-11-21",
+   "group": "Floating Village",
+   "bin": "Floating Village Lv.2",
+   "name": "Red Handfish",
+   "quantity": 3
+  },
+  {
+   "date": "2026-11-22",
+   "group": "Floating Village",
+   "bin": "Floating Village Lv.2",
+   "name": "Splendid Poison Frog",
+   "quantity": 3
+  },
+  {
+   "date": "2026-11-22",
+   "group": "Floating Village",
+   "bin": "Floating Village Lv.2",
+   "name": "Corroboree Frog",
+   "quantity": 3
+  },
+  {
+   "date": "2026-11-16",
+   "group": "Floating Village",
+   "bin": "Floating Village Lv.3",
+   "name": "Bia Goby",
+   "quantity": 3
+  },
+  {
+   "date": "2026-11-16",
+   "group": "Floating Village",
+   "bin": "Floating Village Lv.3",
+   "name": "Blind Cave Eel",
+   "quantity": 3
+  },
+  {
+   "date": "2026-11-17",
+   "group": "Floating Village",
+   "bin": "Floating Village Lv.3",
+   "name": "Bia Goby",
+   "quantity": 3
+  },
+  {
+   "date": "2026-11-17",
+   "group": "Floating Village",
+   "bin": "Floating Village Lv.3",
+   "name": "Blind Cave Eel",
+   "quantity": 3
+  },
+  {
+   "date": "2026-11-18",
+   "group": "Floating Village",
+   "bin": "Floating Village Lv.3",
+   "name": "Texas Blind Salamander",
+   "quantity": 2
+  },
+  {
+   "date": "2026-11-18",
+   "group": "Floating Village",
+   "bin": "Floating Village Lv.3",
+   "name": "Bia Goby",
+   "quantity": 3
+  },
+  {
+   "date": "2026-11-19",
+   "group": "Floating Village",
+   "bin": "Floating Village Lv.3",
+   "name": "Leafy Sea Dragon",
+   "quantity": 2
+  },
+  {
+   "date": "2026-11-19",
+   "group": "Floating Village",
+   "bin": "Floating Village Lv.3",
+   "name": "Haditha Cavefish",
+   "quantity": 3
+  },
+  {
+   "date": "2026-11-20",
+   "group": "Floating Village",
+   "bin": "Floating Village Lv.3",
+   "name": "Haditha Cavefish",
+   "quantity": 3
+  },
+  {
+   "date": "2026-11-20",
+   "group": "Floating Village",
+   "bin": "Floating Village Lv.3",
+   "name": "Blind Cave Eel",
+   "quantity": 2
+  },
+  {
+   "date": "2026-11-21",
+   "group": "Floating Village",
+   "bin": "Floating Village Lv.3",
+   "name": "Blind Cave Eel",
+   "quantity": 3
+  },
+  {
+   "date": "2026-11-21",
+   "group": "Floating Village",
+   "bin": "Floating Village Lv.3",
+   "name": "Texas Blind Salamander",
+   "quantity": 3
+  },
+  {
+   "date": "2026-11-22",
+   "group": "Floating Village",
+   "bin": "Floating Village Lv.3",
+   "name": "Bia Goby",
+   "quantity": 3
+  },
+  {
+   "date": "2026-11-22",
+   "group": "Floating Village",
+   "bin": "Floating Village Lv.3",
+   "name": "Blind Cave Eel",
+   "quantity": 3
+  },
+  {
+   "date": "2026-11-16",
+   "group": "Global Village",
+   "bin": "Global Village Lv.1",
+   "name": "Mush & Chips",
+   "quantity": 1
+  },
+  {
+   "date": "2026-11-16",
+   "group": "Global Village",
+   "bin": "Global Village Lv.1",
+   "name": "Carrot Cake",
+   "quantity": 1
+  },
+  {
+   "date": "2026-11-17",
+   "group": "Global Village",
+   "bin": "Global Village Lv.1",
+   "name": "Shakshuka",
+   "quantity": 1
+  },
+  {
+   "date": "2026-11-17",
+   "group": "Global Village",
+   "bin": "Global Village Lv.1",
+   "name": "Fried Eggs",
+   "quantity": 1
+  },
+  {
+   "date": "2026-11-18",
+   "group": "Global Village",
+   "bin": "Global Village Lv.1",
+   "name": "Veggie Egg Scramble",
+   "quantity": 1
+  },
+  {
+   "date": "2026-11-18",
+   "group": "Global Village",
+   "bin": "Global Village Lv.1",
+   "name": "Power Smoothie",
+   "quantity": 1
+  },
+  {
+   "date": "2026-11-19",
+   "group": "Global Village",
+   "bin": "Global Village Lv.1",
+   "name": "Creamy Summer Soup",
+   "quantity": 1
+  },
+  {
+   "date": "2026-11-19",
+   "group": "Global Village",
+   "bin": "Global Village Lv.1",
+   "name": "Fries",
+   "quantity": 1
+  },
+  {
+   "date": "2026-11-20",
+   "group": "Global Village",
+   "bin": "Global Village Lv.1",
+   "name": "Creamy Summer Soup",
+   "quantity": 1
+  },
+  {
+   "date": "2026-11-20",
+   "group": "Global Village",
+   "bin": "Global Village Lv.1",
+   "name": "Fries",
+   "quantity": 1
+  },
+  {
+   "date": "2026-11-21",
+   "group": "Global Village",
+   "bin": "Global Village Lv.1",
+   "name": "Creamy Summer Soup",
+   "quantity": 1
+  },
+  {
+   "date": "2026-11-21",
+   "group": "Global Village",
+   "bin": "Global Village Lv.1",
+   "name": "Fries",
+   "quantity": 1
+  },
+  {
+   "date": "2026-11-22",
+   "group": "Global Village",
+   "bin": "Global Village Lv.1",
+   "name": "Tomato Soup",
+   "quantity": 1
+  },
+  {
+   "date": "2026-11-22",
+   "group": "Global Village",
+   "bin": "Global Village Lv.1",
+   "name": "Chef Salad",
+   "quantity": 1
+  },
+  {
+   "date": "2026-11-16",
+   "group": "Global Village",
+   "bin": "Global Village Lv.2",
+   "name": "Spaghetti al Pomodoro",
+   "quantity": 1
+  },
+  {
+   "date": "2026-11-16",
+   "group": "Global Village",
+   "bin": "Global Village Lv.2",
+   "name": "Sweet Porridge",
+   "quantity": 1
+  },
+  {
+   "date": "2026-11-17",
+   "group": "Global Village",
+   "bin": "Global Village Lv.2",
+   "name": "Chocolate Cake",
+   "quantity": 1
+  },
+  {
+   "date": "2026-11-17",
+   "group": "Global Village",
+   "bin": "Global Village Lv.2",
+   "name": "Coconut Water",
+   "quantity": 1
+  },
+  {
+   "date": "2026-11-18",
+   "group": "Global Village",
+   "bin": "Global Village Lv.2",
+   "name": "Mushroom Milanese",
+   "quantity": 1
+  },
+  {
+   "date": "2026-11-18",
+   "group": "Global Village",
+   "bin": "Global Village Lv.2",
+   "name": "Banana Curry",
+   "quantity": 1
+  },
+  {
+   "date": "2026-11-19",
+   "group": "Global Village",
+   "bin": "Global Village Lv.2",
+   "name": "Onion Soup",
+   "quantity": 1
+  },
+  {
+   "date": "2026-11-19",
+   "group": "Global Village",
+   "bin": "Global Village Lv.2",
+   "name": "Mushroom Soup",
+   "quantity": 1
+  },
+  {
+   "date": "2026-11-20",
+   "group": "Global Village",
+   "bin": "Global Village Lv.2",
+   "name": "Waffles",
+   "quantity": 1
+  },
+  {
+   "date": "2026-11-20",
+   "group": "Global Village",
+   "bin": "Global Village Lv.2",
+   "name": "Pancakes",
+   "quantity": 1
+  },
+  {
+   "date": "2026-11-21",
+   "group": "Global Village",
+   "bin": "Global Village Lv.2",
+   "name": "Cinnamon Tea",
+   "quantity": 1
+  },
+  {
+   "date": "2026-11-21",
+   "group": "Global Village",
+   "bin": "Global Village Lv.2",
+   "name": "Flaxseed Bread",
+   "quantity": 1
+  },
+  {
+   "date": "2026-11-22",
+   "group": "Global Village",
+   "bin": "Global Village Lv.2",
+   "name": "Waffles",
+   "quantity": 1
+  },
+  {
+   "date": "2026-11-22",
+   "group": "Global Village",
+   "bin": "Global Village Lv.2",
+   "name": "Pancakes",
+   "quantity": 1
+  },
+  {
+   "date": "2026-11-16",
+   "group": "Global Village",
+   "bin": "Global Village Lv.3",
+   "name": "Ful Medames",
+   "quantity": 1
+  },
+  {
+   "date": "2026-11-16",
+   "group": "Global Village",
+   "bin": "Global Village Lv.3",
+   "name": "Pineapple Skewer",
+   "quantity": 1
+  },
+  {
+   "date": "2026-11-17",
+   "group": "Global Village",
+   "bin": "Global Village Lv.3",
+   "name": "Ful Medames",
+   "quantity": 1
+  },
+  {
+   "date": "2026-11-17",
+   "group": "Global Village",
+   "bin": "Global Village Lv.3",
+   "name": "Pineapple Skewer",
+   "quantity": 1
+  },
+  {
+   "date": "2026-11-18",
+   "group": "Global Village",
+   "bin": "Global Village Lv.3",
+   "name": "Mushroom Stir-fry",
+   "quantity": 1
+  },
+  {
+   "date": "2026-11-18",
+   "group": "Global Village",
+   "bin": "Global Village Lv.3",
+   "name": "Baba Ganoush",
+   "quantity": 1
+  },
+  {
+   "date": "2026-11-19",
+   "group": "Global Village",
+   "bin": "Global Village Lv.3",
+   "name": "Summer Salad",
+   "quantity": 1
+  },
+  {
+   "date": "2026-11-19",
+   "group": "Global Village",
+   "bin": "Global Village Lv.3",
+   "name": "Rice Pudding",
+   "quantity": 1
+  },
+  {
+   "date": "2026-11-20",
+   "group": "Global Village",
+   "bin": "Global Village Lv.3",
+   "name": "Pineapple Cake",
+   "quantity": 1
+  },
+  {
+   "date": "2026-11-20",
+   "group": "Global Village",
+   "bin": "Global Village Lv.3",
+   "name": "Nasi Lemak",
+   "quantity": 1
+  },
+  {
+   "date": "2026-11-21",
+   "group": "Global Village",
+   "bin": "Global Village Lv.3",
+   "name": "Ful Medames",
+   "quantity": 1
+  },
+  {
+   "date": "2026-11-21",
+   "group": "Global Village",
+   "bin": "Global Village Lv.3",
+   "name": "Pineapple Skewer",
+   "quantity": 1
+  },
+  {
+   "date": "2026-11-22",
+   "group": "Global Village",
+   "bin": "Global Village Lv.3",
+   "name": "Ful Medames",
+   "quantity": 1
+  },
+  {
+   "date": "2026-11-22",
+   "group": "Global Village",
+   "bin": "Global Village Lv.3",
+   "name": "Pineapple Skewer",
+   "quantity": 1
+  },
+  {
+   "date": "2026-11-16",
+   "group": "Museum",
+   "bin": "Museum Lv.1",
+   "name": "Used Ring Toss",
+   "quantity": 2
+  },
+  {
+   "date": "2026-11-16",
+   "group": "Museum",
+   "bin": "Museum Lv.1",
+   "name": "Spotless Puzzle Cube",
+   "quantity": 1
+  },
+  {
+   "date": "2026-11-17",
+   "group": "Museum",
+   "bin": "Museum Lv.1",
+   "name": "Spotless Kevin Says",
+   "quantity": 1
+  },
+  {
+   "date": "2026-11-17",
+   "group": "Museum",
+   "bin": "Museum Lv.1",
+   "name": "Used Puzzle Cube",
+   "quantity": 2
+  },
+  {
+   "date": "2026-11-18",
+   "group": "Museum",
+   "bin": "Museum Lv.1",
+   "name": "Used Puzzle Cube",
+   "quantity": 2
+  },
+  {
+   "date": "2026-11-18",
+   "group": "Museum",
+   "bin": "Museum Lv.1",
+   "name": "Used Gone Fishin'",
+   "quantity": 2
+  },
+  {
+   "date": "2026-11-19",
+   "group": "Museum",
+   "bin": "Museum Lv.1",
+   "name": "Used Gone Fishin'",
+   "quantity": 2
+  },
+  {
+   "date": "2026-11-19",
+   "group": "Museum",
+   "bin": "Museum Lv.1",
+   "name": "Spotless Fidget Spinner",
+   "quantity": 1
+  },
+  {
+   "date": "2026-11-20",
+   "group": "Museum",
+   "bin": "Museum Lv.1",
+   "name": "Used Kevin Says",
+   "quantity": 1
+  },
+  {
+   "date": "2026-11-20",
+   "group": "Museum",
+   "bin": "Museum Lv.1",
+   "name": "Spotless Fidget Spinner",
+   "quantity": 2
+  },
+  {
+   "date": "2026-11-21",
+   "group": "Museum",
+   "bin": "Museum Lv.1",
+   "name": "Used Kevin Says",
+   "quantity": 1
+  },
+  {
+   "date": "2026-11-21",
+   "group": "Museum",
+   "bin": "Museum Lv.1",
+   "name": "Used Ring Toss",
+   "quantity": 2
+  },
+  {
+   "date": "2026-11-22",
+   "group": "Museum",
+   "bin": "Museum Lv.1",
+   "name": "Used Kevin Says",
+   "quantity": 1
+  },
+  {
+   "date": "2026-11-22",
+   "group": "Museum",
+   "bin": "Museum Lv.1",
+   "name": "Used Ring Toss",
+   "quantity": 2
+  },
+  {
+   "date": "2026-11-16",
+   "group": "Museum",
+   "bin": "Museum Lv.2",
+   "name": "Used Pet Pal",
+   "quantity": 2
+  },
+  {
+   "date": "2026-11-16",
+   "group": "Museum",
+   "bin": "Museum Lv.2",
+   "name": "Spotless Action Figure",
+   "quantity": 2
+  },
+  {
+   "date": "2026-11-17",
+   "group": "Museum",
+   "bin": "Museum Lv.2",
+   "name": "Used Rubber Duck",
+   "quantity": 2
+  },
+  {
+   "date": "2026-11-17",
+   "group": "Museum",
+   "bin": "Museum Lv.2",
+   "name": "Spotless Ruby Doll",
+   "quantity": 2
+  },
+  {
+   "date": "2026-11-18",
+   "group": "Museum",
+   "bin": "Museum Lv.2",
+   "name": "Used Fooby",
+   "quantity": 2
+  },
+  {
+   "date": "2026-11-18",
+   "group": "Museum",
+   "bin": "Museum Lv.2",
+   "name": "Used Rubber Duck",
+   "quantity": 2
+  },
+  {
+   "date": "2026-11-19",
+   "group": "Museum",
+   "bin": "Museum Lv.2",
+   "name": "Used Game Cartridge",
+   "quantity": 2
+  },
+  {
+   "date": "2026-11-19",
+   "group": "Museum",
+   "bin": "Museum Lv.2",
+   "name": "Spotless Ruby Doll",
+   "quantity": 2
+  },
+  {
+   "date": "2026-11-20",
+   "group": "Museum",
+   "bin": "Museum Lv.2",
+   "name": "Used Game Cartridge",
+   "quantity": 2
+  },
+  {
+   "date": "2026-11-20",
+   "group": "Museum",
+   "bin": "Museum Lv.2",
+   "name": "Spotless Ruby Doll",
+   "quantity": 2
+  },
+  {
+   "date": "2026-11-21",
+   "group": "Museum",
+   "bin": "Museum Lv.2",
+   "name": "Used Pet Pal",
+   "quantity": 2
+  },
+  {
+   "date": "2026-11-21",
+   "group": "Museum",
+   "bin": "Museum Lv.2",
+   "name": "Spotless Action Figure",
+   "quantity": 2
+  },
+  {
+   "date": "2026-11-22",
+   "group": "Museum",
+   "bin": "Museum Lv.2",
+   "name": "Used Fooby",
+   "quantity": 2
+  },
+  {
+   "date": "2026-11-22",
+   "group": "Museum",
+   "bin": "Museum Lv.2",
+   "name": "Used Rubber Duck",
+   "quantity": 2
+  },
+  {
+   "date": "2026-11-16",
+   "group": "Museum",
+   "bin": "Museum Lv.3",
+   "name": "Used Techshot",
+   "quantity": 2
+  },
+  {
+   "date": "2026-11-16",
+   "group": "Museum",
+   "bin": "Museum Lv.3",
+   "name": "Used Boombox",
+   "quantity": 4
+  },
+  {
+   "date": "2026-11-17",
+   "group": "Museum",
+   "bin": "Museum Lv.3",
+   "name": "Used Game Guy",
+   "quantity": 2
+  },
+  {
+   "date": "2026-11-17",
+   "group": "Museum",
+   "bin": "Museum Lv.3",
+   "name": "Used YouPod",
+   "quantity": 3
+  },
+  {
+   "date": "2026-11-18",
+   "group": "Museum",
+   "bin": "Museum Lv.3",
+   "name": "Used YouPod",
+   "quantity": 3
+  },
+  {
+   "date": "2026-11-18",
+   "group": "Museum",
+   "bin": "Museum Lv.3",
+   "name": "Spotless Boombox",
+   "quantity": 2
+  },
+  {
+   "date": "2026-11-19",
+   "group": "Museum",
+   "bin": "Museum Lv.3",
+   "name": "Used YouPod",
+   "quantity": 3
+  },
+  {
+   "date": "2026-11-19",
+   "group": "Museum",
+   "bin": "Museum Lv.3",
+   "name": "Spotless Boombox",
+   "quantity": 2
+  },
+  {
+   "date": "2026-11-20",
+   "group": "Museum",
+   "bin": "Museum Lv.3",
+   "name": "Used Blockia 3310",
+   "quantity": 3
+  },
+  {
+   "date": "2026-11-20",
+   "group": "Museum",
+   "bin": "Museum Lv.3",
+   "name": "Spotless Floppy Disk",
+   "quantity": 2
+  },
+  {
+   "date": "2026-11-21",
+   "group": "Museum",
+   "bin": "Museum Lv.3",
+   "name": "Spotless Techshot",
+   "quantity": 2
+  },
+  {
+   "date": "2026-11-21",
+   "group": "Museum",
+   "bin": "Museum Lv.3",
+   "name": "Used Walkboy",
+   "quantity": 4
+  },
+  {
+   "date": "2026-11-22",
+   "group": "Museum",
+   "bin": "Museum Lv.3",
+   "name": "Used Floppy Disk",
+   "quantity": 3
+  },
+  {
+   "date": "2026-11-22",
+   "group": "Museum",
+   "bin": "Museum Lv.3",
+   "name": "Spotless Walkboy",
+   "quantity": 3
+  }
+ ],
+ "pools": {
+  "Floating Village Lv.1": [
+   [
+    [
+     4,
+     "Allis Shad"
+    ],
+    [
+     2,
+     "Rainbow Trout"
+    ],
+    [
+     3,
+     "Atlantic Sturgeon"
+    ],
+    [
+     4,
+     "Atlantic Salmon"
+    ],
+    [
+     3,
+     "Seventyfour Seabream"
+    ],
+    [
+     2,
+     "Giant Sea Bass"
+    ],
+    [
+     3,
+     "Nassau Grouper"
+    ],
+    [
+     2,
+     "Ivell's Sea Anemone"
+    ],
+    [
+     2,
+     "Southern Bluefin Tuna"
+    ],
+    [
+     2,
+     "Japanese Spiky Sea Cucumber"
+    ],
+    [
+     2,
+     "Bahia Brain Coral"
+    ],
+    [
+     2,
+     "Sunflower Sea Star"
+    ]
+   ],
+   [
+    [
+     4,
+     "Allis Shad"
+    ],
+    [
+     2,
+     "Rainbow Trout"
+    ]
+   ],
+   [
+    [
+     4,
+     "Allis Shad"
+    ]
+   ],
+   [
+    [
+     2,
+     "Rainbow Trout"
+    ]
+   ],
+   [
+    [
+     3,
+     "Atlantic Sturgeon"
+    ],
+    [
+     4,
+     "Atlantic Salmon"
+    ]
+   ],
+   [
+    [
+     3,
+     "Atlantic Sturgeon"
+    ]
+   ],
+   [
+    [
+     4,
+     "Atlantic Salmon"
+    ]
+   ],
+   [
+    [
+     4,
+     "Allis Shad"
+    ],
+    [
+     3,
+     "Atlantic Sturgeon"
+    ]
+   ],
+   [
+    [
+     4,
+     "Allis Shad"
+    ]
+   ],
+   [
+    [
+     3,
+     "Atlantic Sturgeon"
+    ]
+   ],
+   [
+    [
+     3,
+     "Seventyfour Seabream"
+    ],
+    [
+     2,
+     "Giant Sea Bass"
+    ]
+   ],
+   [
+    [
+     3,
+     "Seventyfour Seabream"
+    ]
+   ],
+   [
+    [
+     2,
+     "Giant Sea Bass"
+    ]
+   ],
+   [
+    [
+     3,
+     "Nassau Grouper"
+    ],
+    [
+     2,
+     "Ivell's Sea Anemone"
+    ]
+   ],
+   [
+    [
+     3,
+     "Nassau Grouper"
+    ]
+   ],
+   [
+    [
+     2,
+     "Ivell's Sea Anemone"
+    ]
+   ],
+   [
+    [
+     2,
+     "Giant Sea Bass"
+    ],
+    [
+     3,
+     "Atlantic Sturgeon"
+    ]
+   ],
+   [
+    [
+     2,
+     "Giant Sea Bass"
+    ]
+   ],
+   [
+    [
+     3,
+     "Atlantic Sturgeon"
+    ]
+   ],
+   [
+    [
+     2,
+     "Southern Bluefin Tuna"
+    ],
+    [
+     3,
+     "Seventyfour Seabream"
+    ]
+   ],
+   [
+    [
+     2,
+     "Southern Bluefin Tuna"
+    ]
+   ],
+   [
+    [
+     3,
+     "Seventyfour Seabream"
+    ]
+   ],
+   [
+    [
+     2,
+     "Japanese Spiky Sea Cucumber"
+    ],
+    [
+     3,
+     "Rainbow Trout"
+    ]
+   ],
+   [
+    [
+     2,
+     "Japanese Spiky Sea Cucumber"
+    ]
+   ],
+   [
+    [
+     3,
+     "Rainbow Trout"
+    ]
+   ],
+   [
+    [
+     2,
+     "Bahia Brain Coral"
+    ],
+    [
+     3,
+     "Nassau Grouper"
+    ]
+   ],
+   [
+    [
+     2,
+     "Bahia Brain Coral"
+    ]
+   ],
+   [
+    [
+     3,
+     "Nassau Grouper"
+    ]
+   ],
+   [
+    [
+     2,
+     "Ivell's Sea Anemone"
+    ],
+    [
+     4,
+     "Atlantic Salmon"
+    ]
+   ],
+   [
+    [
+     2,
+     "Ivell's Sea Anemone"
+    ]
+   ],
+   [
+    [
+     4,
+     "Atlantic Salmon"
+    ]
+   ],
+   [
+    [
+     2,
+     "Sunflower Sea Star"
+    ],
+    [
+     5,
+     "Allis Shad"
+    ]
+   ],
+   [
+    [
+     2,
+     "Sunflower Sea Star"
+    ]
+   ],
+   [
+    [
+     5,
+     "Allis Shad"
+    ]
+   ],
+   [
+    [
+     3,
+     "Japanese Spiky Sea Cucumber"
+    ],
+    [
+     2,
+     "Sunflower Sea Star"
+    ]
+   ],
+   [
+    [
+     3,
+     "Japanese Spiky Sea Cucumber"
+    ]
+   ],
+   [
+    [
+     2,
+     "Sunflower Sea Star"
+    ]
+   ],
+   [
+    [
+     3,
+     "Bahia Brain Coral"
+    ],
+    [
+     2,
+     "Southern Bluefin Tuna"
+    ]
+   ],
+   [
+    [
+     3,
+     "Bahia Brain Coral"
+    ]
+   ],
+   [
+    [
+     2,
+     "Southern Bluefin Tuna"
+    ]
+   ]
+  ],
+  "Floating Village Lv.2": [
+   [
+    [
+     3,
+     "Corroboree Frog"
+    ],
+    [
+     2,
+     "Dalhousie Catfish"
+    ],
+    [
+     3,
+     "Green Turtle"
+    ],
+    [
+     2,
+     "Hawksbill Turtle"
+    ],
+    [
+     3,
+     "Spring Pygmy Sunfish"
+    ],
+    [
+     3,
+     "Splendid Poison Frog"
+    ],
+    [
+     3,
+     "Red Handfish"
+    ],
+    [
+     3,
+     "Splendid Toadfish"
+    ],
+    [
+     3,
+     "Moapa Dace"
+    ],
+    [
+     2,
+     "Leafy Sea Dragon"
+    ],
+    [
+     3,
+     "European Mudminnow"
+    ],
+    [
+     3,
+     "Bia Goby"
+    ]
+   ],
+   [
+    [
+     3,
+     "Corroboree Frog"
+    ],
+    [
+     2,
+     "Dalhousie Catfish"
+    ]
+   ],
+   [
+    [
+     3,
+     "Corroboree Frog"
+    ]
+   ],
+   [
+    [
+     2,
+     "Dalhousie Catfish"
+    ]
+   ],
+   [
+    [
+     3,
+     "Green Turtle"
+    ],
+    [
+     2,
+     "Hawksbill Turtle"
+    ]
+   ],
+   [
+    [
+     3,
+     "Green Turtle"
+    ]
+   ],
+   [
+    [
+     2,
+     "Hawksbill Turtle"
+    ]
+   ],
+   [
+    [
+     3,
+     "Hawksbill Turtle"
+    ],
+    [
+     3,
+     "Spring Pygmy Sunfish"
+    ]
+   ],
+   [
+    [
+     3,
+     "Hawksbill Turtle"
+    ]
+   ],
+   [
+    [
+     3,
+     "Spring Pygmy Sunfish"
+    ]
+   ],
+   [
+    [
+     3,
+     "Splendid Poison Frog"
+    ],
+    [
+     3,
+     "Corroboree Frog"
+    ]
+   ],
+   [
+    [
+     3,
+     "Splendid Poison Frog"
+    ]
+   ],
+   [
+    [
+     3,
+     "Corroboree Frog"
+    ]
+   ],
+   [
+    [
+     3,
+     "Spring Pygmy Sunfish"
+    ],
+    [
+     3,
+     "Red Handfish"
+    ]
+   ],
+   [
+    [
+     3,
+     "Spring Pygmy Sunfish"
+    ]
+   ],
+   [
+    [
+     3,
+     "Red Handfish"
+    ]
+   ],
+   [
+    [
+     3,
+     "Dalhousie Catfish"
+    ],
+    [
+     3,
+     "Splendid Toadfish"
+    ]
+   ],
+   [
+    [
+     3,
+     "Dalhousie Catfish"
+    ]
+   ],
+   [
+    [
+     3,
+     "Splendid Toadfish"
+    ]
+   ],
+   [
+    [
+     3,
+     "Moapa Dace"
+    ],
+    [
+     2,
+     "Leafy Sea Dragon"
+    ]
+   ],
+   [
+    [
+     3,
+     "Moapa Dace"
+    ]
+   ],
+   [
+    [
+     2,
+     "Leafy Sea Dragon"
+    ]
+   ],
+   [
+    [
+     2,
+     "Red Handfish"
+    ],
+    [
+     3,
+     "European Mudminnow"
+    ]
+   ],
+   [
+    [
+     2,
+     "Red Handfish"
+    ]
+   ],
+   [
+    [
+     3,
+     "European Mudminnow"
+    ]
+   ],
+   [
+    [
+     4,
+     "European Mudminnow"
+    ],
+    [
+     2,
+     "Leafy Sea Dragon"
+    ]
+   ],
+   [
+    [
+     4,
+     "European Mudminnow"
+    ]
+   ],
+   [
+    [
+     2,
+     "Leafy Sea Dragon"
+    ]
+   ],
+   [
+    [
+     3,
+     "Bia Goby"
+    ],
+    [
+     3,
+     "Moapa Dace"
+    ]
+   ],
+   [
+    [
+     3,
+     "Bia Goby"
+    ]
+   ],
+   [
+    [
+     3,
+     "Moapa Dace"
+    ]
+   ],
+   [
+    [
+     3,
+     "Splendid Toadfish"
+    ],
+    [
+     3,
+     "Splendid Poison Frog"
+    ]
+   ],
+   [
+    [
+     3,
+     "Splendid Toadfish"
+    ]
+   ],
+   [
+    [
+     3,
+     "Splendid Poison Frog"
+    ]
+   ],
+   [
+    [
+     3,
+     "Bia Goby"
+    ],
+    [
+     3,
+     "Green Turtle"
+    ]
+   ],
+   [
+    [
+     3,
+     "Bia Goby"
+    ]
+   ],
+   [
+    [
+     3,
+     "Green Turtle"
+    ]
+   ]
+  ],
+  "Floating Village Lv.3": [
+   [
+    [
+     3,
+     "European Mudminnow"
+    ],
+    [
+     2,
+     "Texas Blind Salamander"
+    ],
+    [
+     3,
+     "Bia Goby"
+    ],
+    [
+     3,
+     "Blind Cave Eel"
+    ],
+    [
+     3,
+     "Splendid Toadfish"
+    ],
+    [
+     2,
+     "Blind Cave Brotula"
+    ],
+    [
+     2,
+     "Leafy Sea Dragon"
+    ],
+    [
+     3,
+     "Haditha Cavefish"
+    ]
+   ],
+   [
+    [
+     3,
+     "European Mudminnow"
+    ],
+    [
+     2,
+     "Texas Blind Salamander"
+    ]
+   ],
+   [
+    [
+     3,
+     "European Mudminnow"
+    ]
+   ],
+   [
+    [
+     2,
+     "Texas Blind Salamander"
+    ]
+   ],
+   [
+    [
+     3,
+     "Bia Goby"
+    ],
+    [
+     3,
+     "Blind Cave Eel"
+    ]
+   ],
+   [
+    [
+     3,
+     "Bia Goby"
+    ]
+   ],
+   [
+    [
+     3,
+     "Blind Cave Eel"
+    ]
+   ],
+   [
+    [
+     3,
+     "Splendid Toadfish"
+    ],
+    [
+     2,
+     "Blind Cave Brotula"
+    ]
+   ],
+   [
+    [
+     3,
+     "Splendid Toadfish"
+    ]
+   ],
+   [
+    [
+     2,
+     "Blind Cave Brotula"
+    ]
+   ],
+   [
+    [
+     2,
+     "Leafy Sea Dragon"
+    ],
+    [
+     3,
+     "Haditha Cavefish"
+    ]
+   ],
+   [
+    [
+     2,
+     "Leafy Sea Dragon"
+    ]
+   ],
+   [
+    [
+     3,
+     "Haditha Cavefish"
+    ]
+   ],
+   [
+    [
+     3,
+     "Haditha Cavefish"
+    ],
+    [
+     2,
+     "Blind Cave Eel"
+    ]
+   ],
+   [
+    [
+     3,
+     "Haditha Cavefish"
+    ]
+   ],
+   [
+    [
+     2,
+     "Blind Cave Eel"
+    ]
+   ],
+   [
+    [
+     3,
+     "Blind Cave Eel"
+    ],
+    [
+     2,
+     "Splendid Toadfish"
+    ]
+   ],
+   [
+    [
+     3,
+     "Blind Cave Eel"
+    ]
+   ],
+   [
+    [
+     2,
+     "Splendid Toadfish"
+    ]
+   ],
+   [
+    [
+     2,
+     "Texas Blind Salamander"
+    ],
+    [
+     3,
+     "Bia Goby"
+    ]
+   ],
+   [
+    [
+     2,
+     "Texas Blind Salamander"
+    ]
+   ],
+   [
+    [
+     3,
+     "Bia Goby"
+    ]
+   ],
+   [
+    [
+     2,
+     "Blind Cave Brotula"
+    ],
+    [
+     3,
+     "European Mudminnow"
+    ]
+   ],
+   [
+    [
+     2,
+     "Blind Cave Brotula"
+    ]
+   ],
+   [
+    [
+     3,
+     "European Mudminnow"
+    ]
+   ],
+   [
+    [
+     3,
+     "Haditha Cavefish"
+    ],
+    [
+     2,
+     "Blind Cave Brotula"
+    ]
+   ],
+   [
+    [
+     3,
+     "Haditha Cavefish"
+    ]
+   ],
+   [
+    [
+     2,
+     "Blind Cave Brotula"
+    ]
+   ],
+   [
+    [
+     3,
+     "Blind Cave Eel"
+    ],
+    [
+     3,
+     "Texas Blind Salamander"
+    ]
+   ],
+   [
+    [
+     3,
+     "Blind Cave Eel"
+    ]
+   ],
+   [
+    [
+     3,
+     "Texas Blind Salamander"
+    ]
+   ]
+  ],
+  "Global Village Lv.1": [
+   [
+    [
+     1,
+     "Carrot Soup"
+    ],
+    [
+     1,
+     "Potato Soup"
+    ],
+    [
+     1,
+     "Mush & Chips"
+    ],
+    [
+     1,
+     "Carrot Cake"
+    ],
+    [
+     1,
+     "Creamy Summer Soup"
+    ],
+    [
+     1,
+     "Fries"
+    ],
+    [
+     1,
+     "Veggie Egg Scramble"
+    ],
+    [
+     1,
+     "Power Smoothie"
+    ],
+    [
+     1,
+     "Shakshuka"
+    ],
+    [
+     1,
+     "Fried Eggs"
+    ],
+    [
+     1,
+     "Fruit Smoothie"
+    ],
+    [
+     1,
+     "Tomato Soup"
+    ],
+    [
+     1,
+     "Chef Salad"
+    ]
+   ],
+   [
+    [
+     1,
+     "Carrot Soup"
+    ],
+    [
+     1,
+     "Potato Soup"
+    ]
+   ],
+   [
+    [
+     1,
+     "Carrot Soup"
+    ]
+   ],
+   [
+    [
+     1,
+     "Potato Soup"
+    ]
+   ],
+   [
+    [
+     1,
+     "Mush & Chips"
+    ],
+    [
+     1,
+     "Carrot Cake"
+    ]
+   ],
+   [
+    [
+     1,
+     "Mush & Chips"
+    ]
+   ],
+   [
+    [
+     1,
+     "Carrot Cake"
+    ]
+   ],
+   [
+    [
+     1,
+     "Creamy Summer Soup"
+    ],
+    [
+     1,
+     "Fries"
+    ]
+   ],
+   [
+    [
+     1,
+     "Creamy Summer Soup"
+    ]
+   ],
+   [
+    [
+     1,
+     "Fries"
+    ]
+   ],
+   [
+    [
+     1,
+     "Veggie Egg Scramble"
+    ],
+    [
+     1,
+     "Power Smoothie"
+    ]
+   ],
+   [
+    [
+     1,
+     "Veggie Egg Scramble"
+    ]
+   ],
+   [
+    [
+     1,
+     "Power Smoothie"
+    ]
+   ],
+   [
+    [
+     1,
+     "Shakshuka"
+    ],
+    [
+     1,
+     "Fried Eggs"
+    ]
+   ],
+   [
+    [
+     1,
+     "Shakshuka"
+    ]
+   ],
+   [
+    [
+     1,
+     "Fried Eggs"
+    ]
+   ],
+   [
+    [
+     1,
+     "Carrot Soup"
+    ],
+    [
+     1,
+     "Fruit Smoothie"
+    ]
+   ],
+   [
+    [
+     1,
+     "Carrot Soup"
+    ]
+   ],
+   [
+    [
+     1,
+     "Fruit Smoothie"
+    ]
+   ],
+   [
+    [
+     1,
+     "Tomato Soup"
+    ],
+    [
+     1,
+     "Chef Salad"
+    ]
+   ],
+   [
+    [
+     1,
+     "Tomato Soup"
+    ]
+   ],
+   [
+    [
+     1,
+     "Chef Salad"
+    ]
+   ]
+  ],
+  "Global Village Lv.2": [
+   [
+    [
+     1,
+     "Mushroom Milanese"
+    ],
+    [
+     1,
+     "Banana Curry"
+    ],
+    [
+     1,
+     "Cauli Bites"
+    ],
+    [
+     1,
+     "Blooming Onion"
+    ],
+    [
+     1,
+     "Eggnog"
+    ],
+    [
+     1,
+     "Cinnamon Rolls"
+    ],
+    [
+     1,
+     "Eggplant Tagine"
+    ],
+    [
+     1,
+     "Ratatouille"
+    ],
+    [
+     1,
+     "Waffles"
+    ],
+    [
+     1,
+     "Pancakes"
+    ],
+    [
+     1,
+     "Fruit Salad"
+    ],
+    [
+     1,
+     "Bioluminescent Ivy Soup"
+    ],
+    [
+     1,
+     "Spaghetti al Pomodoro"
+    ],
+    [
+     1,
+     "Sweet Porridge"
+    ],
+    [
+     1,
+     "Chocolate Cake"
+    ],
+    [
+     1,
+     "Coconut Water"
+    ],
+    [
+     1,
+     "Cinnamon Tea"
+    ],
+    [
+     1,
+     "Flaxseed Bread"
+    ],
+    [
+     1,
+     "Onion Soup"
+    ],
+    [
+     1,
+     "Mushroom Soup"
+    ],
+    [
+     1,
+     "Chocolate Porridge"
+    ],
+    [
+     1,
+     "Croissant"
+    ],
+    [
+     1,
+     "Hot Chocolate"
+    ],
+    [
+     1,
+     "Banana Pudding"
+    ]
+   ],
+   [
+    [
+     1,
+     "Mushroom Milanese"
+    ],
+    [
+     1,
+     "Banana Curry"
+    ]
+   ],
+   [
+    [
+     1,
+     "Mushroom Milanese"
+    ]
+   ],
+   [
+    [
+     1,
+     "Banana Curry"
+    ]
+   ],
+   [
+    [
+     1,
+     "Cauli Bites"
+    ],
+    [
+     1,
+     "Blooming Onion"
+    ]
+   ],
+   [
+    [
+     1,
+     "Cauli Bites"
+    ]
+   ],
+   [
+    [
+     1,
+     "Blooming Onion"
+    ]
+   ],
+   [
+    [
+     1,
+     "Eggnog"
+    ],
+    [
+     1,
+     "Cinnamon Rolls"
+    ]
+   ],
+   [
+    [
+     1,
+     "Eggnog"
+    ]
+   ],
+   [
+    [
+     1,
+     "Cinnamon Rolls"
+    ]
+   ],
+   [
+    [
+     1,
+     "Eggplant Tagine"
+    ],
+    [
+     1,
+     "Ratatouille"
+    ]
+   ],
+   [
+    [
+     1,
+     "Eggplant Tagine"
+    ]
+   ],
+   [
+    [
+     1,
+     "Ratatouille"
+    ]
+   ],
+   [
+    [
+     1,
+     "Waffles"
+    ],
+    [
+     1,
+     "Pancakes"
+    ]
+   ],
+   [
+    [
+     1,
+     "Waffles"
+    ]
+   ],
+   [
+    [
+     1,
+     "Pancakes"
+    ]
+   ],
+   [
+    [
+     1,
+     "Fruit Salad"
+    ],
+    [
+     1,
+     "Bioluminescent Ivy Soup"
+    ]
+   ],
+   [
+    [
+     1,
+     "Fruit Salad"
+    ]
+   ],
+   [
+    [
+     1,
+     "Bioluminescent Ivy Soup"
+    ]
+   ],
+   [
+    [
+     1,
+     "Spaghetti al Pomodoro"
+    ],
+    [
+     1,
+     "Sweet Porridge"
+    ]
+   ],
+   [
+    [
+     1,
+     "Spaghetti al Pomodoro"
+    ]
+   ],
+   [
+    [
+     1,
+     "Sweet Porridge"
+    ]
+   ],
+   [
+    [
+     1,
+     "Chocolate Cake"
+    ],
+    [
+     1,
+     "Coconut Water"
+    ]
+   ],
+   [
+    [
+     1,
+     "Chocolate Cake"
+    ]
+   ],
+   [
+    [
+     1,
+     "Coconut Water"
+    ]
+   ],
+   [
+    [
+     1,
+     "Cinnamon Tea"
+    ],
+    [
+     1,
+     "Flaxseed Bread"
+    ]
+   ],
+   [
+    [
+     1,
+     "Cinnamon Tea"
+    ]
+   ],
+   [
+    [
+     1,
+     "Flaxseed Bread"
+    ]
+   ],
+   [
+    [
+     1,
+     "Onion Soup"
+    ],
+    [
+     1,
+     "Mushroom Soup"
+    ]
+   ],
+   [
+    [
+     1,
+     "Onion Soup"
+    ]
+   ],
+   [
+    [
+     1,
+     "Mushroom Soup"
+    ]
+   ],
+   [
+    [
+     1,
+     "Chocolate Porridge"
+    ],
+    [
+     1,
+     "Croissant"
+    ]
+   ],
+   [
+    [
+     1,
+     "Chocolate Porridge"
+    ]
+   ],
+   [
+    [
+     1,
+     "Croissant"
+    ]
+   ],
+   [
+    [
+     1,
+     "Hot Chocolate"
+    ],
+    [
+     1,
+     "Banana Pudding"
+    ]
+   ],
+   [
+    [
+     1,
+     "Hot Chocolate"
+    ]
+   ],
+   [
+    [
+     1,
+     "Banana Pudding"
+    ]
+   ]
+  ],
+  "Global Village Lv.3": [
+   [
+    [
+     1,
+     "Tropical Smoothie"
+    ],
+    [
+     1,
+     "Chakalaka"
+    ],
+    [
+     1,
+     "Mushroom Stir-fry"
+    ],
+    [
+     1,
+     "Baba Ganoush"
+    ],
+    [
+     1,
+     "Chili Soup"
+    ],
+    [
+     1,
+     "Pineapple Fried Rice"
+    ],
+    [
+     1,
+     "Congee"
+    ],
+    [
+     1,
+     "Sweet Soymilk"
+    ],
+    [
+     1,
+     "Gimbap"
+    ],
+    [
+     1,
+     "Radish Kimchi"
+    ],
+    [
+     1,
+     "Ful Medames"
+    ],
+    [
+     1,
+     "Pineapple Skewer"
+    ],
+    [
+     1,
+     "Summer Salad"
+    ],
+    [
+     1,
+     "Rice Pudding"
+    ],
+    [
+     1,
+     "Omurice"
+    ],
+    [
+     1,
+     "Tamago Sushi"
+    ],
+    [
+     1,
+     "Miso Soup"
+    ],
+    [
+     1,
+     "Oyster Mushroom Gyoza"
+    ],
+    [
+     1,
+     "Pineapple Cake"
+    ],
+    [
+     1,
+     "Nasi Lemak"
+    ],
+    [
+     1,
+     "Tomato Basil Soup"
+    ],
+    [
+     1,
+     "Winter Soup"
+    ]
+   ],
+   [
+    [
+     1,
+     "Tropical Smoothie"
+    ],
+    [
+     1,
+     "Chakalaka"
+    ]
+   ],
+   [
+    [
+     1,
+     "Tropical Smoothie"
+    ]
+   ],
+   [
+    [
+     1,
+     "Chakalaka"
+    ]
+   ],
+   [
+    [
+     1,
+     "Mushroom Stir-fry"
+    ],
+    [
+     1,
+     "Baba Ganoush"
+    ]
+   ],
+   [
+    [
+     1,
+     "Mushroom Stir-fry"
+    ]
+   ],
+   [
+    [
+     1,
+     "Baba Ganoush"
+    ]
+   ],
+   [
+    [
+     1,
+     "Chili Soup"
+    ],
+    [
+     1,
+     "Pineapple Fried Rice"
+    ]
+   ],
+   [
+    [
+     1,
+     "Chili Soup"
+    ]
+   ],
+   [
+    [
+     1,
+     "Pineapple Fried Rice"
+    ]
+   ],
+   [
+    [
+     1,
+     "Congee"
+    ],
+    [
+     1,
+     "Sweet Soymilk"
+    ]
+   ],
+   [
+    [
+     1,
+     "Congee"
+    ]
+   ],
+   [
+    [
+     1,
+     "Sweet Soymilk"
+    ]
+   ],
+   [
+    [
+     1,
+     "Gimbap"
+    ],
+    [
+     1,
+     "Radish Kimchi"
+    ]
+   ],
+   [
+    [
+     1,
+     "Gimbap"
+    ]
+   ],
+   [
+    [
+     1,
+     "Radish Kimchi"
+    ]
+   ],
+   [
+    [
+     1,
+     "Ful Medames"
+    ],
+    [
+     1,
+     "Pineapple Skewer"
+    ]
+   ],
+   [
+    [
+     1,
+     "Ful Medames"
+    ]
+   ],
+   [
+    [
+     1,
+     "Pineapple Skewer"
+    ]
+   ],
+   [
+    [
+     1,
+     "Summer Salad"
+    ],
+    [
+     1,
+     "Rice Pudding"
+    ]
+   ],
+   [
+    [
+     1,
+     "Summer Salad"
+    ]
+   ],
+   [
+    [
+     1,
+     "Rice Pudding"
+    ]
+   ],
+   [
+    [
+     1,
+     "Omurice"
+    ],
+    [
+     1,
+     "Tamago Sushi"
+    ]
+   ],
+   [
+    [
+     1,
+     "Omurice"
+    ]
+   ],
+   [
+    [
+     1,
+     "Tamago Sushi"
+    ]
+   ],
+   [
+    [
+     1,
+     "Miso Soup"
+    ],
+    [
+     1,
+     "Oyster Mushroom Gyoza"
+    ]
+   ],
+   [
+    [
+     1,
+     "Miso Soup"
+    ]
+   ],
+   [
+    [
+     1,
+     "Oyster Mushroom Gyoza"
+    ]
+   ],
+   [
+    [
+     1,
+     "Pineapple Cake"
+    ],
+    [
+     1,
+     "Nasi Lemak"
+    ]
+   ],
+   [
+    [
+     1,
+     "Pineapple Cake"
+    ]
+   ],
+   [
+    [
+     1,
+     "Nasi Lemak"
+    ]
+   ],
+   [
+    [
+     1,
+     "Tomato Basil Soup"
+    ],
+    [
+     1,
+     "Winter Soup"
+    ]
+   ],
+   [
+    [
+     1,
+     "Tomato Basil Soup"
+    ]
+   ],
+   [
+    [
+     1,
+     "Winter Soup"
+    ]
+   ]
+  ],
+  "Museum Lv.1": [
+   [
+    [
+     2,
+     "Used Fidget Spinner"
+    ],
+    [
+     2,
+     "Used Ring Toss"
+    ],
+    [
+     2,
+     "Used Puzzle Cube"
+    ],
+    [
+     2,
+     "Used Gone Fishin'"
+    ],
+    [
+     1,
+     "Spotless Puzzle Cube"
+    ],
+    [
+     1,
+     "Spotless Ring Toss"
+    ],
+    [
+     1,
+     "Spotless Fidget Spinner"
+    ],
+    [
+     1,
+     "Spotless Gone Fishin'"
+    ],
+    [
+     1,
+     "Used Kevin Says"
+    ],
+    [
+     1,
+     "Used Lava Lamp"
+    ],
+    [
+     1,
+     "Spotless Kevin Says"
+    ],
+    [
+     1,
+     "Spotless Lava Lamp"
+    ]
+   ],
+   [
+    [
+     2,
+     "Used Fidget Spinner"
+    ],
+    [
+     2,
+     "Used Ring Toss"
+    ]
+   ],
+   [
+    [
+     2,
+     "Used Fidget Spinner"
+    ]
+   ],
+   [
+    [
+     2,
+     "Used Ring Toss"
+    ]
+   ],
+   [
+    [
+     2,
+     "Used Puzzle Cube"
+    ],
+    [
+     2,
+     "Used Gone Fishin'"
+    ]
+   ],
+   [
+    [
+     2,
+     "Used Puzzle Cube"
+    ]
+   ],
+   [
+    [
+     2,
+     "Used Gone Fishin'"
+    ]
+   ],
+   [
+    [
+     2,
+     "Used Ring Toss"
+    ],
+    [
+     1,
+     "Spotless Puzzle Cube"
+    ]
+   ],
+   [
+    [
+     2,
+     "Used Ring Toss"
+    ]
+   ],
+   [
+    [
+     1,
+     "Spotless Puzzle Cube"
+    ]
+   ],
+   [
+    [
+     1,
+     "Spotless Ring Toss"
+    ],
+    [
+     2,
+     "Used Fidget Spinner"
+    ]
+   ],
+   [
+    [
+     1,
+     "Spotless Ring Toss"
+    ]
+   ],
+   [
+    [
+     2,
+     "Used Fidget Spinner"
+    ]
+   ],
+   [
+    [
+     2,
+     "Used Gone Fishin'"
+    ],
+    [
+     1,
+     "Spotless Fidget Spinner"
+    ]
+   ],
+   [
+    [
+     2,
+     "Used Gone Fishin'"
+    ]
+   ],
+   [
+    [
+     1,
+     "Spotless Fidget Spinner"
+    ]
+   ],
+   [
+    [
+     1,
+     "Spotless Gone Fishin'"
+    ],
+    [
+     2,
+     "Used Puzzle Cube"
+    ]
+   ],
+   [
+    [
+     1,
+     "Spotless Gone Fishin'"
+    ]
+   ],
+   [
+    [
+     2,
+     "Used Puzzle Cube"
+    ]
+   ],
+   [
+    [
+     1,
+     "Used Kevin Says"
+    ],
+    [
+     2,
+     "Spotless Fidget Spinner"
+    ]
+   ],
+   [
+    [
+     1,
+     "Used Kevin Says"
+    ]
+   ],
+   [
+    [
+     2,
+     "Spotless Fidget Spinner"
+    ]
+   ],
+   [
+    [
+     1,
+     "Used Lava Lamp"
+    ],
+    [
+     2,
+     "Spotless Puzzle Cube"
+    ]
+   ],
+   [
+    [
+     1,
+     "Used Lava Lamp"
+    ]
+   ],
+   [
+    [
+     2,
+     "Spotless Puzzle Cube"
+    ]
+   ],
+   [
+    [
+     1,
+     "Used Kevin Says"
+    ],
+    [
+     2,
+     "Used Ring Toss"
+    ]
+   ],
+   [
+    [
+     1,
+     "Used Kevin Says"
+    ]
+   ],
+   [
+    [
+     2,
+     "Used Ring Toss"
+    ]
+   ],
+   [
+    [
+     1,
+     "Spotless Kevin Says"
+    ],
+    [
+     2,
+     "Used Puzzle Cube"
+    ]
+   ],
+   [
+    [
+     1,
+     "Spotless Kevin Says"
+    ]
+   ],
+   [
+    [
+     2,
+     "Used Puzzle Cube"
+    ]
+   ],
+   [
+    [
+     1,
+     "Used Lava Lamp"
+    ],
+    [
+     2,
+     "Used Gone Fishin'"
+    ]
+   ],
+   [
+    [
+     1,
+     "Used Lava Lamp"
+    ]
+   ],
+   [
+    [
+     2,
+     "Used Gone Fishin'"
+    ]
+   ],
+   [
+    [
+     1,
+     "Spotless Lava Lamp"
+    ],
+    [
+     2,
+     "Used Fidget Spinner"
+    ]
+   ],
+   [
+    [
+     1,
+     "Spotless Lava Lamp"
+    ]
+   ],
+   [
+    [
+     2,
+     "Used Fidget Spinner"
+    ]
+   ]
+  ],
+  "Museum Lv.2": [
+   [
+    [
+     2,
+     "Used Pet Pal"
+    ],
+    [
+     2,
+     "Spotless Action Figure"
+    ],
+    [
+     1,
+     "Spotless Pet Pal"
+    ],
+    [
+     3,
+     "Used Ruby Doll"
+    ],
+    [
+     2,
+     "Used Game Cartridge"
+    ],
+    [
+     2,
+     "Spotless Ruby Doll"
+    ],
+    [
+     1,
+     "Spotless Game Cartridge"
+    ],
+    [
+     3,
+     "Used Action Figure"
+    ],
+    [
+     2,
+     "Used Rubber Duck"
+    ],
+    [
+     1,
+     "Spotless Rubber Duck"
+    ],
+    [
+     2,
+     "Used Lofufu"
+    ],
+    [
+     2,
+     "Used Fooby"
+    ],
+    [
+     1,
+     "Spotless Lofufu"
+    ],
+    [
+     1,
+     "Spotless Fooby"
+    ]
+   ],
+   [
+    [
+     2,
+     "Used Pet Pal"
+    ],
+    [
+     2,
+     "Spotless Action Figure"
+    ]
+   ],
+   [
+    [
+     2,
+     "Used Pet Pal"
+    ]
+   ],
+   [
+    [
+     2,
+     "Spotless Action Figure"
+    ]
+   ],
+   [
+    [
+     1,
+     "Spotless Pet Pal"
+    ],
+    [
+     3,
+     "Used Ruby Doll"
+    ]
+   ],
+   [
+    [
+     1,
+     "Spotless Pet Pal"
+    ]
+   ],
+   [
+    [
+     3,
+     "Used Ruby Doll"
+    ]
+   ],
+   [
+    [
+     2,
+     "Used Game Cartridge"
+    ],
+    [
+     2,
+     "Spotless Ruby Doll"
+    ]
+   ],
+   [
+    [
+     2,
+     "Used Game Cartridge"
+    ]
+   ],
+   [
+    [
+     2,
+     "Spotless Ruby Doll"
+    ]
+   ],
+   [
+    [
+     1,
+     "Spotless Game Cartridge"
+    ],
+    [
+     3,
+     "Used Action Figure"
+    ]
+   ],
+   [
+    [
+     1,
+     "Spotless Game Cartridge"
+    ]
+   ],
+   [
+    [
+     3,
+     "Used Action Figure"
+    ]
+   ],
+   [
+    [
+     2,
+     "Used Rubber Duck"
+    ],
+    [
+     2,
+     "Spotless Ruby Doll"
+    ]
+   ],
+   [
+    [
+     2,
+     "Used Rubber Duck"
+    ]
+   ],
+   [
+    [
+     2,
+     "Spotless Ruby Doll"
+    ]
+   ],
+   [
+    [
+     1,
+     "Spotless Rubber Duck"
+    ],
+    [
+     3,
+     "Used Ruby Doll"
+    ]
+   ],
+   [
+    [
+     1,
+     "Spotless Rubber Duck"
+    ]
+   ],
+   [
+    [
+     3,
+     "Used Ruby Doll"
+    ]
+   ],
+   [
+    [
+     2,
+     "Used Lofufu"
+    ],
+    [
+     3,
+     "Used Game Cartridge"
+    ]
+   ],
+   [
+    [
+     2,
+     "Used Lofufu"
+    ]
+   ],
+   [
+    [
+     3,
+     "Used Game Cartridge"
+    ]
+   ],
+   [
+    [
+     2,
+     "Used Fooby"
+    ],
+    [
+     2,
+     "Spotless Pet Pal"
+    ]
+   ],
+   [
+    [
+     2,
+     "Used Fooby"
+    ]
+   ],
+   [
+    [
+     2,
+     "Spotless Pet Pal"
+    ]
+   ],
+   [
+    [
+     2,
+     "Used Lofufu"
+    ],
+    [
+     2,
+     "Used Pet Pal"
+    ]
+   ],
+   [
+    [
+     2,
+     "Used Lofufu"
+    ]
+   ],
+   [
+    [
+     2,
+     "Used Pet Pal"
+    ]
+   ],
+   [
+    [
+     1,
+     "Spotless Lofufu"
+    ],
+    [
+     2,
+     "Spotless Action Figure"
+    ]
+   ],
+   [
+    [
+     1,
+     "Spotless Lofufu"
+    ]
+   ],
+   [
+    [
+     2,
+     "Spotless Action Figure"
+    ]
+   ],
+   [
+    [
+     2,
+     "Used Fooby"
+    ],
+    [
+     2,
+     "Used Rubber Duck"
+    ]
+   ],
+   [
+    [
+     2,
+     "Used Fooby"
+    ]
+   ],
+   [
+    [
+     2,
+     "Used Rubber Duck"
+    ]
+   ],
+   [
+    [
+     1,
+     "Spotless Fooby"
+    ],
+    [
+     3,
+     "Used Action Figure"
+    ]
+   ],
+   [
+    [
+     1,
+     "Spotless Fooby"
+    ]
+   ],
+   [
+    [
+     3,
+     "Used Action Figure"
+    ]
+   ]
+  ],
+  "Museum Lv.3": [
+   [
+    [
+     3,
+     "Used YouPod"
+    ],
+    [
+     2,
+     "Spotless Boombox"
+    ],
+    [
+     2,
+     "Spotless YouPod"
+    ],
+    [
+     3,
+     "Used Floppy Disk"
+    ],
+    [
+     3,
+     "Used Blockia 3310"
+    ],
+    [
+     2,
+     "Spotless Floppy Disk"
+    ],
+    [
+     2,
+     "Spotless Blockia 3310"
+    ],
+    [
+     4,
+     "Used Boombox"
+    ],
+    [
+     3,
+     "Spotless Walkboy"
+    ],
+    [
+     4,
+     "Used Walkboy"
+    ],
+    [
+     2,
+     "Used Game Guy"
+    ],
+    [
+     2,
+     "Used Techshot"
+    ],
+    [
+     2,
+     "Spotless Game Guy"
+    ],
+    [
+     2,
+     "Spotless Techshot"
+    ]
+   ],
+   [
+    [
+     3,
+     "Used YouPod"
+    ],
+    [
+     2,
+     "Spotless Boombox"
+    ]
+   ],
+   [
+    [
+     3,
+     "Used YouPod"
+    ]
+   ],
+   [
+    [
+     2,
+     "Spotless Boombox"
+    ]
+   ],
+   [
+    [
+     2,
+     "Spotless YouPod"
+    ],
+    [
+     3,
+     "Used Floppy Disk"
+    ]
+   ],
+   [
+    [
+     2,
+     "Spotless YouPod"
+    ]
+   ],
+   [
+    [
+     3,
+     "Used Floppy Disk"
+    ]
+   ],
+   [
+    [
+     3,
+     "Used Blockia 3310"
+    ],
+    [
+     2,
+     "Spotless Floppy Disk"
+    ]
+   ],
+   [
+    [
+     3,
+     "Used Blockia 3310"
+    ]
+   ],
+   [
+    [
+     2,
+     "Spotless Floppy Disk"
+    ]
+   ],
+   [
+    [
+     2,
+     "Spotless Blockia 3310"
+    ],
+    [
+     4,
+     "Used Boombox"
+    ]
+   ],
+   [
+    [
+     2,
+     "Spotless Blockia 3310"
+    ]
+   ],
+   [
+    [
+     4,
+     "Used Boombox"
+    ]
+   ],
+   [
+    [
+     3,
+     "Used Floppy Disk"
+    ],
+    [
+     3,
+     "Spotless Walkboy"
+    ]
+   ],
+   [
+    [
+     3,
+     "Used Floppy Disk"
+    ]
+   ],
+   [
+    [
+     3,
+     "Spotless Walkboy"
+    ]
+   ],
+   [
+    [
+     2,
+     "Spotless Floppy Disk"
+    ],
+    [
+     4,
+     "Used Walkboy"
+    ]
+   ],
+   [
+    [
+     2,
+     "Spotless Floppy Disk"
+    ]
+   ],
+   [
+    [
+     4,
+     "Used Walkboy"
+    ]
+   ],
+   [
+    [
+     2,
+     "Used Game Guy"
+    ],
+    [
+     4,
+     "Used Walkboy"
+    ]
+   ],
+   [
+    [
+     2,
+     "Used Game Guy"
+    ]
+   ],
+   [
+    [
+     4,
+     "Used Walkboy"
+    ]
+   ],
+   [
+    [
+     2,
+     "Used Techshot"
+    ],
+    [
+     4,
+     "Used Boombox"
+    ]
+   ],
+   [
+    [
+     2,
+     "Used Techshot"
+    ]
+   ],
+   [
+    [
+     4,
+     "Used Boombox"
+    ]
+   ],
+   [
+    [
+     2,
+     "Used Game Guy"
+    ],
+    [
+     3,
+     "Used YouPod"
+    ]
+   ],
+   [
+    [
+     2,
+     "Used Game Guy"
+    ]
+   ],
+   [
+    [
+     3,
+     "Used YouPod"
+    ]
+   ],
+   [
+    [
+     2,
+     "Spotless Game Guy"
+    ],
+    [
+     4,
+     "Used Boombox"
+    ]
+   ],
+   [
+    [
+     2,
+     "Spotless Game Guy"
+    ]
+   ],
+   [
+    [
+     4,
+     "Used Boombox"
+    ]
+   ],
+   [
+    [
+     2,
+     "Used Techshot"
+    ],
+    [
+     3,
+     "Used Blockia 3310"
+    ]
+   ],
+   [
+    [
+     2,
+     "Used Techshot"
+    ]
+   ],
+   [
+    [
+     3,
+     "Used Blockia 3310"
+    ]
+   ],
+   [
+    [
+     2,
+     "Spotless Techshot"
+    ],
+    [
+     4,
+     "Used Walkboy"
+    ]
+   ],
+   [
+    [
+     2,
+     "Spotless Techshot"
+    ]
+   ],
+   [
+    [
+     4,
+     "Used Walkboy"
+    ]
+   ]
+  ]
+ },
+ "failed": []
+}
