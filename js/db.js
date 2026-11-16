@@ -75,7 +75,11 @@ async function callFn(body) {
   if (data?.error) throw new Error(data.error);
   return data;
 }
-export async function runUpdate(today, knownDishes) { return (await callFn({ today, known_dishes: knownDishes })).data; }
+export async function runUpdate(today, knownDishes) {
+  // the live list saved by the "Update bin requests" GitHub Action, next to this website
+  const liveUrl = new URL('data/requests-live.json', location.href).href;
+  return (await callFn({ today, known_dishes: knownDishes, live_url: liveUrl })).data;
+}
 /** "Refresh item data": step 1 reads the item list, step 2 reads item pages in batches */
 export async function itemCatalog() { return callFn({ action: 'catalog' }); }
 export async function itemDetails(slugs) { return callFn({ action: 'details', slugs }); }

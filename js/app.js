@@ -19,9 +19,9 @@ const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = se
 const GROUP_COLORS = {
   'Floating Village': ['var(--blue)', 'var(--blue-soft)'], 'Global Village': ['var(--orange-dk)', 'var(--orange-soft)'],
   Museum: ['var(--lav)', 'var(--lav-soft)'], 'Cooking Ingredients': ['var(--green)', 'var(--green-soft)'],
-  Wardrobe: ['var(--berry)', 'var(--berry-soft)'],
+  Wardrobe: ['var(--berry)', 'var(--berry-soft)'], Housing: ['#8A6E55', '#F3EAE0'],
 };
-const CAT_TAG = { Materials: '', Crops: 'green', Foods: 'orange', Fishes: 'blue', Flowers: 'berry', Artifacts: 'lav', Fragments: 'berry', Clothing: 'berry', Other: '' };
+const CAT_TAG = { Materials: '', Crops: 'green', Foods: 'orange', Fishes: 'blue', Flowers: 'berry', Artifacts: 'lav', Fragments: 'berry', Clothing: 'berry', Housing: '', Other: '' };
 const RARITY_TAG = { Common: '', Uncommon: 'green', Rare: 'blue', 'Very rare': 'lav', Personal: 'personal', Premium: 'premium', Epic: 'lav', Legendary: 'orange' };
 const RARITY_STARS = { Personal: ['\u{1F512}', '#9C6B3C'], Premium: ['\u{1F512}', '#B58A1B'], Uncommon: ['\u2605', '#5BC8D8'], Rare: ['\u2605\u2605', '#5BC8D8'], 'Very rare': ['\u2605\u2605', '#F2B632'], Epic: ['\u2605\u2605', '#F2B632'], Legendary: ['\u2605\u2605\u2605', '#F2B632'] };
 const TABS = [['Home', 'Spotless Game Guy'], ['Items', 'Gears'], ['Tasks', "Used Gone Fishin'"], ['Bins', 'Carrot Cake'], ['More', 'Used Rubber Duck']];
@@ -102,6 +102,14 @@ if (S.ui.items.sort === 'rarity') S.ui.items.sort = S.ui.items.dir < 0 ? 'rarity
 S.ui.recSort = S.ui.recSort || 'az';
 const RARITY_ORDER = ['Common', 'Uncommon', 'Rare', 'Very rare', 'Personal', 'Premium', 'Epic', 'Legendary'];
 const CLOTHING_PARTS = ['Hats', 'Tops', 'Bottoms', 'Shoes', 'Accessories', 'Walk Trails'];
+const HOUSING_PARTS = ['Stations and Storages', 'Farming', 'Housewares', 'Decorations', 'Wall Decoration', 'Outdoor Decor'];
+S.ui.order = S.ui.order || 'az';     // item order setting: 'az' or 'game' (as listed on the codex)
+S.ui.taskMode = S.ui.taskMode || 'week';
+/** Compare two item names using the item order setting. */
+function nameCmp(a, b) {
+  if (S.ui.order === 'game') { const x = S.model.orderOf(a), y = S.model.orderOf(b); if (x !== y) return x - y; }
+  return a.localeCompare(b);
+}
 S.ui.search = ''; S.ui.items.search = '';
 const persist = () => localStorage.setItem('loftia-ui', JSON.stringify({ view: S.view, ui: S.ui }));
 
@@ -238,6 +246,15 @@ function renderView() {
 function go(v) { S.view = v; S.ui.search = ''; persist(); render(); scrollTo(0, 0); }
 
 // ───────── Home ─────────
+/** A note when the saved requests don't reach a full week ahead, with a button to update. */
+function staleBanner() {
+  const m = S.model, ds = m.dates(), today = todayISO();
+  const at = m.data?.updated_at ? todayISO(new Date(m.data.updated_at)) : '';
+  const last = ds[ds.length - 1] || '';
+  if (S.updating || (at === today && last >= addDays(today, 6))) return '';
+  const why = !ds.length ? 'No upcoming bin requests are saved.' : at !== today ? `Requests were last updated ${at ? shortDate(at) : 'a while ago'}.` : `The saved requests only go to ${shortDate(last)}.`;
+  return `<div class="banner"><span class="small">${why} Update to get today and the week ahead.</span><button class="btn primary small" data-act="update">\u21bb Update requests</button></div>`;
+}
 function nextBinDay() {
   const ds = S.model.dates(), t = todayISO();
   if (!ds.length) return [null, []];
@@ -275,7 +292,7 @@ function viewHome() {
   }).join('');
   const [nd, entries] = nextBinDay();
   const tasks = m.buildTasks(), t = tasks[0];
-  return `<section class="hero"><div><div class="hero-l">Upcoming bin requests</div>
+  return `${staleBanner()}<section class="hero"><div><div class="hero-l">Upcoming bin requests</div>
       <div class="when">${ds.length ? rangeText(ds[0], ds[ds.length - 1]) : 'No requests yet'}</div><div class="hero-l">${esc(updatedText())}</div></div>
       <div class="pct"><b>${pct}%</b><div class="hero-l">overall complete</div><div class="bar"><i style="width:${pct}%"></i></div></div></section>
     <div class="stats">${stats.map(([l, v, s, c, page]) => `<button class="card stat" data-act="go" data-v="${page}">
@@ -296,7 +313,7 @@ function selectChip(id, label, options, value, allValue = 'All') {
   return `<label class="chip select-chip ${value !== allValue ? 'on' : ''}"><span class="sel-l">${esc(label)}</span>
     <select id="${id}" aria-label="${esc(label)}">${options.map(([v, l]) => `<option value="${esc(v)}" ${value === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label>`;
 }
-const ITEM_SORTS = [['az', 'A\u2013Z'], ['most', 'Most first'], ['fewest', 'Fewest first'], ['rarity-up', 'Rarity: common first'], ['rarity-down', 'Rarity: rarest first']];
+const ITEM_SORTS_REST = [ ['most', 'Most first'], ['fewest', 'Fewest first'], ['rarity-up', 'Rarity: common first'], ['rarity-down', 'Rarity: rarest first']];
 function viewItems() {
   const u = S.ui.items;
   if (!S._db || S._db.model !== S.model) S._db = { model: S.model, rows: S.model.database() };
@@ -311,7 +328,8 @@ function itemRows() {
   const m = S.model, u = S.ui.items;
   if (!S._db || S._db.model !== m) S._db = { model: m, rows: m.database() };
   const inTab = (r) => u.tab === 'All' || r.category === u.tab || (u.tab === 'Crops' && r.category === 'Flowers');
-  const inSub = (r) => u.sub === 'All' || (u.tab === 'Clothing' ? r.sub === u.sub : r.kind === u.sub);
+  const bySub = u.tab === 'Clothing' || u.tab === 'Housing';
+  const inSub = (r) => u.sub === 'All' || (bySub ? r.sub === u.sub : r.kind === u.sub);
   const toks = normName(u.search).split(' ').filter(Boolean);
   const matches = (r) => toks.every((t) => r.search.includes(t));
   const owned = (r) => !u.owned || m.get(r.key) > 0;
@@ -321,13 +339,13 @@ function itemRows() {
     if (!matches(r) || !owned(r)) continue;
     if (rar(r)) { const c = r.category === 'Flowers' ? 'Crops' : r.category; counts[c] = (counts[c] || 0) + 1; counts.All = (counts.All || 0) + 1; }
     if (!inTab(r)) continue;
-    if (rar(r)) { const v = u.tab === 'Clothing' ? r.sub : r.kind; if (v) subCounts[v] = (subCounts[v] || 0) + 1; }
+    if (rar(r)) { const v = bySub ? r.sub : r.kind; if (v) subCounts[v] = (subCounts[v] || 0) + 1; }
     if (inSub(r)) { const rr = m.rarity(r.name) || 'Unknown'; rarCounts[rr] = (rarCounts[rr] || 0) + 1; }
   }
   const rows = S._db.rows.filter((r) => matches(r) && owned(r) && rar(r) && inTab(r) && inSub(r));
-  const nm = (a, b) => a.name.localeCompare(b.name);
+  const nm = (a, b) => nameCmp(a.name, b.name);
   const by = {
-    az: nm, most: (a, b) => m.get(b.key) - m.get(a.key) || nm(a, b), fewest: (a, b) => m.get(a.key) - m.get(b.key) || nm(a, b),
+    az: nm, game: (a, b) => m.orderOf(a.name) - m.orderOf(b.name) || a.name.localeCompare(b.name), most: (a, b) => m.get(b.key) - m.get(a.key) || nm(a, b), fewest: (a, b) => m.get(a.key) - m.get(b.key) || nm(a, b),
     'rarity-up': (a, b) => m.rarityRank(a.name) - m.rarityRank(b.name) || nm(a, b),
     'rarity-down': (a, b) => { const x = m.rarityRank(a.name), y = m.rarityRank(b.name), n = RARITY_ORDER.length; return (y >= n ? -1 : y) - (x >= n ? -1 : x) || nm(a, b); },
   };
@@ -335,8 +353,9 @@ function itemRows() {
   return { rows, counts, toks, subCounts, rarCounts };
 }
 /** Groups inside a tab: clothing parts, raw / refined materials, cooked food. */
-function subOptions(tab) {
+function subOptions(tab, subCounts = {}) {
   if (tab === 'Clothing') return CLOTHING_PARTS;
+  if (tab === 'Housing') return [...HOUSING_PARTS, ...Object.keys(subCounts).filter((k) => !HOUSING_PARTS.includes(k))];
   if (tab === 'Materials') return ['Raw materials', 'Refined materials'];
   if (tab === 'All') return ['Raw materials', 'Refined materials', 'Cooked food'];
   return [];
@@ -351,7 +370,8 @@ function itemTile(r) {
     return tile({ k: r.key, name: r.name, count: n ? '\u2713' : '', badge: !n && pieces ? `${pieces}/${pc.qty}` : '', badgeCls: 'orange', dim: !n, sub: r.sub || '' });
   }
   const can = m.recipesFor(r.name).length ? m.maxMake(r.name) : 0;
-  return tile({ k: r.key, name: r.name, count: fmt(n), dim: !n, badge: can ? `make ${can}` : '', badgeCls: 'green', sub: r.kind && S.ui.items.tab === 'All' ? r.kind.replace(' materials', '') : '' });
+  return tile({ k: r.key, name: r.name, count: fmt(n), dim: !n, badge: can ? `make ${can}` : '', badgeCls: 'green',
+    sub: r.category === 'Housing' ? r.sub : (r.kind && S.ui.items.tab === 'All' ? r.kind.replace(' materials', '') : '') });
 }
 /** Clothing you're close to completing: tiles showing pieces you have, or pieces still needed. */
 function clothingProgressHTML(limit = 0) {
@@ -369,22 +389,22 @@ function clothingProgressHTML(limit = 0) {
 }
 function fillItems() {
   const u = S.ui.items, m = S.model;
-  const subs = subOptions(u.tab);
-  if (u.sub !== 'All' && !subs.includes(u.sub)) u.sub = 'All';
   const { rows, counts, toks, subCounts, rarCounts } = itemRows();
+  const subs = subOptions(u.tab, subCounts);
+  if (u.sub !== 'All' && !subs.includes(u.sub)) { u.sub = 'All'; return fillItems(); }
   $$('[data-act="items-tab"]').forEach((b) => { $('.n', b).textContent = counts[b.dataset.v] || 0; });
-  const hasKinds = u.tab === 'Clothing' || Object.keys(subCounts).length;
+  const hasKinds = u.tab === 'Clothing' || u.tab === 'Housing' || Object.keys(subCounts).length;
   const rarOpts = [['All', 'All rarities'], ...RARITY_ORDER.filter((r) => rarCounts[r]).map((r) => [r, `${r} (${rarCounts[r]})`]),
     ...(rarCounts.Unknown ? [['Unknown', `Not read yet (${rarCounts.Unknown})`]] : [])];
   if (u.rarity !== 'All' && !rarOpts.some(([v]) => v === u.rarity)) rarOpts.push([u.rarity, `${u.rarity} (0)`]);
   $('#items-filters').innerHTML = [
     subs.length && hasKinds ? selectChip('items-sub', 'Group', [['All', u.tab === 'All' ? 'Everything' : `All ${(TAB_LABEL[u.tab] || u.tab).toLowerCase()}`], ...subs.map((v) => [v, `${v} (${subCounts[v] || 0})`])], u.sub) : '',
     selectChip('items-rarity', 'Rarity', rarOpts, u.rarity),
-    selectChip('items-sort', 'Sort', ITEM_SORTS, u.sort, 'az'),
+    selectChip('items-sort', 'Sort', [['az', S.ui.order === 'game' ? 'Game order' : 'A\u2013Z'], ...ITEM_SORTS_REST], u.sort === 'game' ? 'az' : u.sort, 'az'),
     `<button class="chip ${u.owned ? 'on' : ''}" data-act="items-owned">Only mine</button>`,
   ].join('');
   $('#items-extra').innerHTML = u.tab === 'Clothing' && !toks.length ? clothingProgressHTML(6) : '';
-  const needsData = ['Fragments', 'Clothing'].includes(u.tab) && !m.catalog[u.tab]?.length;
+  const needsData = ['Fragments', 'Clothing', 'Housing'].includes(u.tab) && !m.catalog[u.tab]?.length;
   const unread = (u.rarity !== 'All' || u.sort.startsWith('rarity') || u.sub !== 'All') && rarCounts.Unknown;
   $('#items-note').innerHTML = needsData ? '' : rows.length
     ? `${plural(rows.length, 'item')}${u.owned ? ' you have' : ''}. Tap one to add, set, make or recycle.${unread ? ` <span class="warn-inline">Some items haven\u2019t been read from the codex yet \u2013 <button class="linkish" data-act="refresh-items">Refresh item data</button></span>` : ''}`
@@ -497,7 +517,7 @@ function viewList() {
     <p class="note" id="list-note"></p><div class="inv-grid" id="list-grid"></div>`;
 }
 function listSorts(cat) {
-  const out = [['need', 'Most needed'], ['az', 'A\u2013Z'], ['have', 'Most in bag'], ['rarity', 'Rarity: common first'], ['rarity-down', 'Rarity: rarest first']];
+  const out = [['need', 'Most needed'], ['az', S.ui.order === 'game' ? 'Game order' : 'A\u2013Z'], ['have', 'Most in bag'], ['rarity', 'Rarity: common first'], ['rarity-down', 'Rarity: rarest first']];
   if (cat === 'Global Village' || cat === 'All Items' || cat === 'Shopping List' || S.ui.method === 'Can cook') out.push(['station', 'Cooking station']);
   return out;
 }
@@ -508,7 +528,7 @@ function fillList() {
     && (!S.ui.missingOnly || cat === 'Shopping List' || m.missing(i) > 0));
   const sorts = listSorts(cat).map(([v]) => v);
   if (!sorts.includes(S.ui.listSort)) S.ui.listSort = 'need';
-  const nm = (a, b) => a.name.localeCompare(b.name);
+  const nm = (a, b) => nameCmp(a.name, b.name);
   const by = {
     need: (a, b) => m.missing(b) - m.missing(a) || nm(a, b), az: nm, have: (a, b) => m.haveOf(b) - m.haveOf(a) || nm(a, b),
     rarity: (a, b) => m.rarityRank(a.name) - m.rarityRank(b.name) || nm(a, b),
@@ -530,7 +550,7 @@ function fillList() {
 // ───────── Bins ─────────
 function viewBins() {
   const m = S.model, dates = m.dates(), today = todayISO();
-  if (!dates.length) return '<div class="card empty">No bin requests loaded \u2013 press Update requests.</div>';
+  if (!dates.length) return staleBanner() || '<div class="card empty">No upcoming bin requests \u2013 press Update requests.</div>';
   if (!dates.includes(S.ui.binDay)) S.ui.binDay = dates.includes(today) ? today : (dates.find((d) => d >= today) || dates[dates.length - 1]);
   const day = S.ui.binDay;
   const chips = dates.map((d) => {
@@ -547,7 +567,7 @@ function viewBins() {
     return `<div class="effort">${tileIcon(PAGE_ICONS[group], 36, group)}<h2>${esc(effort)}</h2><span class="muted small">${withReq.filter((b) => m.binDone(day, b)).length}/${withReq.length} done</span></div>
       <div class="bins-row">${labels.map((b) => binCard(day, b)).join('')}</div>`;
   }).join('');
-  return `<div class="chips wrap" style="margin-bottom:10px">${chips}</div>
+  return `${staleBanner()}<div class="chips wrap" style="margin-bottom:10px">${chips}</div>
     <div class="row-h" style="margin-bottom:4px"><h2 class="section" style="margin:0">${prettyDate(day)}</h2>
       ${ready.length && !expired ? `<button class="btn primary small" data-act="mark-day" data-d="${day}">\u2713 Mark all ready bins done</button>` : ''}</div>
     <p class="note">${esc(note)}</p>${sections}`;
@@ -586,26 +606,29 @@ function taskTile(e) {
 function viewTasks() {
   const m = S.model, f = S.ui.taskFilter;
   const groups = f === 'All' ? TASK_GROUPS : [f];
-  const tasks = m.buildTasks(groups);
+  const mode = S.ui.taskMode;
+  const tasks = m.buildTasks(groups, mode);
   const nItems = tasks.reduce((t, x) => t + x.items.length, 0);
+  const hasPools = Object.keys(m.pools).length > 0;
   const missing = m.missingInfo().filter((i) => groups.includes(i.group));
   let last = null, n = 0;
   const body = tasks.map((t) => {
     n++;
-    const head = t.deadline !== last ? `<h2 class="section">${prettyDate(t.deadline)} \u2013 ${dueText(t.deadline)}</h2>` : '';
+    const head = mode === 'all' ? (n === 1 ? '<h2 class="section">Stock up for every request</h2>' : '') : t.deadline !== last ? `<h2 class="section">${prettyDate(t.deadline)} \u2013 ${dueText(t.deadline)}</h2>` : '';
     last = t.deadline;
     const main = t.items.filter((e) => !e.bonus).length, bonus = t.items.length - main;
     return `${head}<div class="card task"><div class="th"><div class="num ${t.known ? '' : 'unknown'}">${n}</div><div class="titles">
-        <h3 class="cardtitle">${esc(taskTitle(t))}</h3><div class="small muted">${esc(taskSub(t).replace(/^./, (c) => c.toUpperCase()))}. ${main} due${bonus ? `, plus ${bonus} extra while you\u2019re here` : ''}.</div></div>${dueTag(t.deadline)}</div>
+        <h3 class="cardtitle">${esc(taskTitle(t))}</h3><div class="small muted">${esc(taskSub(t).replace(/^./, (c) => c.toUpperCase()))}. ${mode === 'all' ? plural(t.items.length, 'item') : `${main} due${bonus ? `, plus ${bonus} extra while you\u2019re here` : ''}`}.</div></div>${mode === 'all' ? '' : dueTag(t.deadline)}</div>
       <div class="inv-grid sm">${t.items.map(taskTile).join('')}</div></div>`;
   }).join('');
   const finds = S.finds.slice(0, 12);
-  return `<div class="row-h" style="margin-bottom:10px"><div class="chips">${['All', ...TASK_GROUPS].map((x) => `<button class="chip ${f === x ? 'on' : ''}" data-act="task-filter" data-v="${x}">${x}</button>`).join('')}</div>
+  return `<div class="row-h" style="margin-bottom:10px"><div class="seg small-seg" role="radiogroup" aria-label="Plan for">${[['week', 'Next 7 days'], ['all', 'Every request']].map(([v, l]) => `<button role="radio" aria-checked="${mode === v}" class="${mode === v ? 'on' : ''}" data-act="task-mode" data-v="${v}">${l}</button>`).join('')}</div>
+      <div class="chips">${['All', ...TASK_GROUPS].map((x) => `<button class="chip ${f === x ? 'on' : ''}" data-act="task-filter" data-v="${x}">${x}</button>`).join('')}</div>
       <span class="small muted">${plural(tasks.length, 'stop')}, ${plural(nItems, 'item')} to find</span></div>
-    <p class="note">Tap an item to log what you found.</p>
+    <p class="note">${mode === 'all' ? (hasPools ? 'Everything it takes to fill every request in each bin\u2019s rotation once, so you\u2019re ready whatever comes up. ' : 'Press Update requests to load each bin\u2019s full list of requests. ') : 'What the next 7 days of bins still need. '}Tap an item to log what you found.</p>
     ${missing.length ? `<div class="banner"><span class="small">Rarity and location haven\u2019t been looked up yet for ${plural(missing.length, 'item')}.</span>
       ${S.updating ? '' : '<button class="btn primary small" data-act="update">Look up now</button>'}</div>` : ''}
-    ${tasks.length ? body : '<div class="card"><h3 class="cardtitle" style="color:var(--green)">Nothing left to collect \u2713</h3><div class="small muted">Every open bin already has its fish and artifacts covered by what\u2019s in your bag.</div></div>'}
+    ${tasks.length ? body : `<div class="card"><h3 class="cardtitle" style="color:var(--green)">Nothing left to collect \u2713</h3><div class="small muted">${mode === 'all' ? (hasPools ? 'You already have enough to fill every request in the rotation.' : 'No rotation lists loaded yet.') : 'Every open bin already has its fish and artifacts covered by what\u2019s in your bag.'}</div></div>`}
     ${finds.length ? `<h2 class="section">Collected today</h2><div class="card">${finds.map((x) => {
       const [g, name] = splitKey(x.item_key);
       return `<div class="req-row"><span class="tiny muted" style="width:62px">${new Date(x.ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span>${icon(name, 26, g)}
@@ -630,12 +653,12 @@ function viewRecipes() {
   const m = S.model;
   const it = (d) => m.item('Global Village', d);
   const by = {
-    az: (a, b) => a.localeCompare(b), station: (a, b) => (m.station(it(a)) || 9) - (m.station(it(b)) || 9) || a.localeCompare(b),
+    az: (a, b) => nameCmp(a, b), station: (a, b) => (m.station(it(a)) || 9) - (m.station(it(b)) || 9) || a.localeCompare(b),
     tocook: (a, b) => m.missing(it(b)) - m.missing(it(a)) || a.localeCompare(b), cancook: (a, b) => m.cookable(it(b)) - m.cookable(it(a)) || a.localeCompare(b),
     rarity: (a, b) => m.rarityRank(a) - m.rarityRank(b) || a.localeCompare(b),
   };
   const dishes = [...m.recipeMap.keys()].filter((d) => it(d) && !(S.ui.hideDone && m.missing(it(d)) === 0)).sort(by[S.ui.recSort] || by.az);
-  return `<div class="sticky-tools"><div class="filters">${selectChip('rec-sort', 'Sort', [['az', 'A\u2013Z'], ['station', 'Cooking station'], ['tocook', 'Most to cook'], ['cancook', 'Can cook now'], ['rarity', 'Rarity']], S.ui.recSort, 'az')}
+  return `<div class="sticky-tools"><div class="filters">${selectChip('rec-sort', 'Sort', [['az', S.ui.order === 'game' ? 'Game order' : 'A\u2013Z'], ['station', 'Cooking station'], ['tocook', 'Most to cook'], ['cancook', 'Can cook now'], ['rarity', 'Rarity']], S.ui.recSort, 'az')}
       <button class="chip ${S.ui.hideDone ? 'on' : ''}" data-act="hide-done">Hide finished dishes</button></div></div>
     <p class="note">Tap a dish to see its ingredients and cook it. <button class="linkish small" data-act="go" data-v="Cooking Ingredients">Cooking ingredients \u2192</button></p>
     <div class="inv-grid">${dishes.map((d) => {
@@ -661,13 +684,16 @@ function viewMore() {
     <div class="more-grid">${MORE_PAGES.map((p) => `<button class="card more-btn" data-act="go" data-v="${esc(p)}">${tileIcon(PAGE_ICONS[p], 44, GROUPS.includes(p) ? p : null)}<span><b>${esc(p)}</b><span class="tiny muted">${esc(SUBTITLES[p] || '')}</span></span></button>`).join('')}</div>
     <h2 class="section">Data</h2>
     <div class="card list-card">
-      <button class="li" data-act="update" ${S.updating ? 'disabled' : ''}><b>\u21bb Update requests</b><span class="tiny muted">${esc(updatedText())}</span></button>
+      <button class="li" data-act="update" ${S.updating ? 'disabled' : ''}><b>\u21bb Update requests</b><span class="tiny muted">${esc(updatedText())}${S.model.data?.source ? ` \u00b7 from the ${esc(S.model.data.source)}` : ''}</span></button>
       <button class="li" data-act="refresh-items" ${S.refreshing ? 'disabled' : ''}><b>\u21bb Refresh item data</b><span class="tiny muted">Rarity, types, recipes, clothing and fragments from the codex. Reads only items it hasn\u2019t read yet. ${itemsAt ? `Last read ${new Date(itemsAt).toLocaleDateString()}` : 'Not loaded yet'}</span></button>
       <button class="li" data-act="refresh-all" ${S.refreshing ? 'disabled' : ''}><b>Re-read every item</b><span class="tiny muted">Use after a game update changes existing recipes. Takes several minutes.</span></button>
       <div class="li static"><b>Item pictures</b><span class="tiny muted">${localIconCount() ? `${fmt(localIconCount())} pictures saved on your site \u2013 they keep working even if the codex goes away.` : 'Loaded from loftiacodex.com. To keep your own copy, run \u201cSave item pictures\u201d in your GitHub repository\u2019s Actions tab (see README).'}</span></div>
       <button class="li" data-act="import"><b>Import CSV</b><span class="tiny muted">Update or replace your counts from a file</span></button>
       <button class="li" data-act="export"><b>Export CSV</b><span class="tiny muted">Download everything you own</span></button>
       <button class="li" data-act="backups"><b>Backups</b><span class="tiny muted">Restore, back up now, or use a backup file</span></button></div>
+    <h2 class="section">Settings</h2>
+    <div class="card list-card"><div class="li static"><b>Item order</b><span class="tiny muted">How items are ordered when sorting by name, everywhere.</span>
+      <div class="seg small-seg" style="margin-top:8px" role="radiogroup">${[['az', 'A\u2013Z'], ['game', 'Game order (as on the codex)']].map(([v, l]) => `<button role="radio" aria-checked="${S.ui.order === v}" class="${S.ui.order === v ? 'on' : ''}" data-act="set-order" data-v="${v}">${l}</button>`).join('')}</div></div></div>
     <h2 class="section">Account</h2>
     <div class="card list-card"><div class="li static"><b>${esc(S.session.user.email || '')}</b><span class="tiny muted">Saved to your account</span></div>
       <button class="li" data-act="password"><b>Change password</b></button><button class="li" data-act="signout"><b>Sign out</b></button></div>
@@ -722,6 +748,8 @@ const ACT = {
   'undo-bin': (d) => undoBin(d.d, d.b),
   'mark-day': (d) => markDay(d.d),
   'task-filter': (d) => { S.ui.taskFilter = d.v; persist(); renderView(); },
+  'task-mode': (d) => { S.ui.taskMode = d.v; persist(); renderView(); },
+  'set-order': (d) => { S.ui.order = d.v; persist(); S._db = null; refresh(); toast(d.v === 'game' ? 'Items now follow the game\u2019s order' : 'Items now sorted A\u2013Z'); },
   'undo-find': (d) => undoFind(Number(d.id)),
   'sched-day': (d) => { S.ui.schedDay = d.d; persist(); renderView(); },
   'hide-done': () => { S.ui.hideDone = !S.ui.hideDone; persist(); renderView(); },
@@ -817,7 +845,8 @@ async function runUpdate() {
     refresh();
     const after = JSON.stringify(S.model.schedule.map((r) => [r.date, r.bin, r.name, r.quantity]).sort());
     const ds = S.model.dates();
-    let msg = before === after ? 'Requests are already up to date' : `Requests updated \u2013 ${data.schedule.length} requests for ${ds.length ? rangeText(ds[0], ds[ds.length - 1]) : 'the coming days'}`;
+    let msg = before === after ? 'Requests are already up to date' : `Requests updated \u2013 ${ds.length ? rangeText(ds[0], ds[ds.length - 1]) : 'no upcoming days'}`;
+    msg += ` \u00b7 from the ${data.source || 'codex'}`;
     if (data.info_unknown) msg += ` \u00b7 location not found for ${plural(data.info_unknown, 'item')}`;
     if (S.model.missingRecipes.length) msg += ` \u00b7 no recipe found for ${S.model.missingRecipes.slice(0, 3).join(', ')}`;
     toast(msg);

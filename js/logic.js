@@ -11,12 +11,12 @@ export const CATEGORIES = Object.keys(CATALOG);
 export const CATEGORY_GROUP = {
   Materials: 'Cooking Ingredients', Crops: 'Cooking Ingredients', Flowers: 'Cooking Ingredients',
   Foods: 'Global Village', Fishes: 'Floating Village', Artifacts: 'Museum', Other: 'Cooking Ingredients',
-  Fragments: 'Wardrobe', Clothing: 'Wardrobe',
+  Fragments: 'Wardrobe', Clothing: 'Wardrobe', Housing: 'Housing',
 };
-export const ADD_TABS = ['Materials', 'Crops', 'Foods', 'Fishes', 'Artifacts', 'Fragments', 'Clothing'];
-export const TAB_LABEL = { Materials: 'Materials', Crops: 'Crops', Foods: 'Food', Fishes: 'Fish', Artifacts: 'Artifacts', Fragments: 'Fragments', Clothing: 'Clothing', Flowers: 'Crops' };
+export const ADD_TABS = ['Materials', 'Crops', 'Foods', 'Fishes', 'Artifacts', 'Fragments', 'Clothing', 'Housing'];
+export const TAB_LABEL = { Materials: 'Materials', Crops: 'Crops', Foods: 'Food', Fishes: 'Fish', Artifacts: 'Artifacts', Fragments: 'Fragments', Clothing: 'Clothing', Housing: 'Housing', Flowers: 'Crops' };
 const SLUG_OVERRIDE = new Map();   // names whose codex address isn't the plain slug (e.g. "Party Hat" -> party-hat-3)
-export const GROUP_CATEGORY = { 'Floating Village': 'Fishes', Museum: 'Artifacts', 'Global Village': 'Foods' };
+export const GROUP_CATEGORY = { 'Floating Village': 'Fishes', Museum: 'Artifacts', 'Global Village': 'Foods', Housing: 'Housing' };
 const BIN_ORDER = Object.fromEntries(BIN_PAGES.map((b, i) => [b[2], i]));
 
 export const key = (group, name) => `${group}||${name}`;
@@ -73,6 +73,7 @@ export class Model {
     this.data = data || { schedule: [] };
     this.schedule = (this.data.schedule || []).slice();
     this.info = this.data.item_info || {};
+    this.pools = this.data.pools || {};
     this.have = new Map();
     this.done = new Set();
     this.today = todayISO();
@@ -133,6 +134,11 @@ export class Model {
       }
     }
     this.catalog = cat;
+    // "Game order" = the order the codex lists items in
+    this.order = new Map();
+    let n = 0;
+    if (fetched.length) for (const i of fetched) { if (!this.order.has(i.name)) this.order.set(i.name, n++); }
+    for (const names of Object.values(cat)) for (const nm of names) if (!this.order.has(nm)) this.order.set(nm, n++);
     this.sub = new Map(fetched.map((i) => [i.name, i.sub]));
     this.listRarity = new Map(fetched.filter((i) => i.rarity).map((i) => [i.name, i.rarity]));
     this.index = new Map();
@@ -160,6 +166,7 @@ export class Model {
     }
     return out.sort((a, b) => b.pct - a.pct || a.left - b.left || a.clothing.localeCompare(b.clothing));
   }
+  orderOf(name) { return this.order.has(name) ? this.order.get(name) : 1e9; }
   categoryOf(name) { return (this.index.get(normName(name)) || CATALOG_INDEX.get(normName(name)) || ['', 'Other'])[1]; }
   details(name) { return this.detailsBySlug[slugOf(name)] || {}; }
 
@@ -297,7 +304,18 @@ export class Model {
   }
 
   // ── contribution bins ──
-  dates() { return [...new Set(this.schedule.map((r) => r.date))].sort(); }
+  /** Days with requests, today and forward (passed bins are never shown). */
+  dates() { return [...new Set(this.schedule.map((r) => r.date))].filter((d) => d >= this.today).sort(); }
+  /** For "every request": how many of each item it takes to fill every request in each bin's rotation once. */
+  poolNeed(groups = TASK_GROUPS) {
+    const need = new Map();
+    for (const [bin, reqs] of Object.entries(this.pools)) {
+      const g = bin.split(' Lv')[0];
+      if (!groups.includes(g)) continue;
+      for (const req of reqs) for (const [qty, name] of req) { const k = key(g, name); need.set(k, (need.get(k) || 0) + qty); }
+    }
+    return need;
+  }
   binEntries(day, bin) {
     const merged = new Map();
     for (const r of this.schedule) {
@@ -359,9 +377,15 @@ export class Model {
   }
 
   // ── task list ──
-  buildTasks(groups = TASK_GROUPS) {
+  buildTasks(groups = TASK_GROUPS, mode = 'week') {
     const per = new Map();
-    for (const [id, slot] of this.alloc) {
+    if (mode === 'all') {   // stock up for every request in the rotation
+      for (const [k, need] of this.poolNeed(groups)) {
+        const [g, n] = splitKey(k), short = need - this.get(k);
+        if (short > 0) per.set(k, { key: k, group: g, name: n, short, due: '', bins: [], need });
+      }
+    }
+    if (mode !== 'all') for (const [id, slot] of this.alloc) {
       const [d, b] = id.split('|');
       for (const [k, [c, q]] of slot) {
         const [g, n] = splitKey(k);
@@ -385,7 +409,7 @@ export class Model {
     }
     const tasks = [];
     for (const t of stops.values()) {
-      t.deadline = t.items.reduce((m, e) => (e.due < m ? e.due : m), t.items[0].due);
+      t.deadline = mode === 'all' ? '' : t.items.reduce((m, e) => (e.due < m ? e.due : m), t.items[0].due);
       for (const e of t.items) e.bonus = e.due > t.deadline;
       t.items.sort((a, b) => (a.bonus - b.bonus) || a.due.localeCompare(b.due) || (a.rank - b.rank) || a.name.localeCompare(b.name));
       const main = t.items.filter((e) => !e.bonus);
@@ -409,7 +433,7 @@ export class Model {
     if (k) return k;
     if (GROUPS.includes(category)) return key(category, name);
     const cat = category ? category.trim().replace(/^\w/, (c) => c.toUpperCase()) : 'Other';
-    const alias = { Fish: 'Fishes', Food: 'Foods', Artifact: 'Artifacts', Material: 'Materials', Crop: 'Crops', Fragment: 'Fragments', 'Item Fragments': 'Fragments', Hats: 'Clothing', Tops: 'Clothing', Bottoms: 'Clothing', Shoes: 'Clothing', Accessories: 'Clothing' };
+    const alias = { House: 'Housing', Furniture: 'Housing', 'Stations And Storages': 'Housing', Farming: 'Housing', Housewares: 'Housing', Decorations: 'Housing', 'Wall Decoration': 'Housing', 'Outdoor Decor': 'Housing', Fish: 'Fishes', Food: 'Foods', Artifact: 'Artifacts', Material: 'Materials', Crop: 'Crops', Fragment: 'Fragments', 'Item Fragments': 'Fragments', Hats: 'Clothing', Tops: 'Clothing', Bottoms: 'Clothing', Shoes: 'Clothing', Accessories: 'Clothing' };
     return key(CATEGORY_GROUP[alias[cat] || cat] || 'Cooking Ingredients', name);
   }
 
