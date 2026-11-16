@@ -261,7 +261,17 @@ export class Model {
 
   // ── item info from the codex (rarity / where to find it) ──
   itemInfo(name) { return this.info[slugify(name)] || {}; }
-  rarityRank(name) { const r = this.itemInfo(name).rarity; const i = RARITIES.indexOf(r); return i < 0 ? RARITIES.length : i; }
+  /** Rarity from the bin lookups (fish, artifacts) or from "Refresh item data" (everything else). */
+  rarity(name) { return this.itemInfo(name).rarity || (this.detailsBySlug[slugOf(name)] || {}).rarity || ''; }
+  rarityRank(name) { const i = RARITIES.indexOf(this.rarity(name)); return i < 0 ? RARITIES.length : i; }
+  /** Raw materials / Refined materials / Cooked food - from the codex item type. */
+  kind(name, category = this.categoryOf(name)) {
+    if (category === 'Foods') return 'Cooked food';
+    if (category !== 'Materials') return '';
+    const t = (this.detailsBySlug[slugOf(name)] || {}).type || '';
+    if (!t) return '';
+    return /refined/i.test(t) ? 'Refined materials' : 'Raw materials';
+  }
   missingInfo() {
     return this.items.filter((i) => TASK_GROUPS.includes(i.group)
       && !(this.itemInfo(i.name).rarity && (this.itemInfo(i.name).location || this.itemInfo(i.name).district)));
@@ -391,7 +401,8 @@ export class Model {
         const k = this.keyForName(name, cat);
         if (seen.has(k)) continue;
         seen.add(k);
-        rows.push({ key: k, name, category: cat, sub: this.sub.get(name) || '', search: normName(`${name} ${cat} ${this.sub.get(name) || ''}`) });
+        const sub = this.sub.get(name) || '', kind = this.kind(name, cat);
+        rows.push({ key: k, name, category: cat, sub, kind, search: normName(`${name} ${cat} ${sub} ${kind}`) });
       }
     }
     const extra = new Set([...this.have.keys(), ...this.byKey.keys()]);
@@ -401,7 +412,7 @@ export class Model {
       seen.add(k);
       const [g, name] = splitKey(k);
       const cat = GROUP_CATEGORY[g] || (g === 'Wardrobe' ? (/\(piece\)$/i.test(name) ? 'Fragments' : 'Clothing') : 'Other');
-      rows.push({ key: k, name, category: cat, sub: '', search: normName(`${name} ${cat}`) });
+      rows.push({ key: k, name, category: cat, sub: '', kind: '', search: normName(`${name} ${cat}`) });
     }
     return rows;
   }
