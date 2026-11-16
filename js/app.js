@@ -25,9 +25,9 @@ const CAT_TAG = { Materials: '', Crops: 'green', Foods: 'orange', Fishes: 'blue'
 const RARITY_TAG = { Common: '', Uncommon: 'green', Rare: 'blue', 'Very rare': 'lav', Personal: 'personal', Premium: 'premium', Epic: 'lav', Legendary: 'orange' };
 const RARITY_STARS = { Personal: ['\u{1F512}', '#9C6B3C'], Premium: ['\u{1F512}', '#B58A1B'], Uncommon: ['\u2605', '#5BC8D8'], Rare: ['\u2605\u2605', '#5BC8D8'], 'Very rare': ['\u2605\u2605', '#F2B632'], Epic: ['\u2605\u2605', '#F2B632'], Legendary: ['\u2605\u2605\u2605', '#F2B632'] };
 const TABS = [['Home', 'Spotless Game Guy'], ['Items', 'Gears'], ['Tasks', "Used Gone Fishin'"], ['Bins', 'Carrot Cake'], ['More', 'Used Rubber Duck']];
-const MORE_PAGES = ['Clothing progress', 'Shopping List', 'Floating Village', 'Global Village', 'Museum', 'Cooking Ingredients', 'All Items', 'Daily Schedule', 'Recipes'];
+const MORE_PAGES = ['Grab bins', 'Clothing progress', 'Shopping List', 'Floating Village', 'Global Village', 'Museum', 'Cooking Ingredients', 'All Items', 'Daily Schedule', 'Recipes'];
 const PAGE_ICONS = {
-  'Clothing progress': 'Explorer Hat', 'Shopping List': 'Golden Chest Key', 'All Items': 'Used Rubber Duck', 'Floating Village': 'Rainbow Trout', 'Global Village': 'Potato Soup',
+  'Grab bins': 'Golden Chest Key', 'Clothing progress': 'Explorer Hat', 'Shopping List': 'Golden Chest Key', 'All Items': 'Used Rubber Duck', 'Floating Village': 'Rainbow Trout', 'Global Village': 'Potato Soup',
   Museum: 'Used Boombox', 'Cooking Ingredients': 'Carrot', 'Daily Schedule': 'Fried Eggs', Recipes: 'Cooking Station',
 };
 const TITLES = { Home: 'Dashboard', Items: 'My items', Tasks: 'Task list', Bins: 'Contribution bins', More: 'More' };
@@ -40,6 +40,7 @@ const SUBTITLES = {
   Museum: 'Toys and artifacts for the museum', 'Cooking Ingredients': 'Raw ingredients \u2013 targets follow the dishes you still need',
   'Daily Schedule': 'Bin requests, day by day', Recipes: 'What every dish needs \u2013 tap one to cook it',
   'Clothing progress': 'Clothing you\u2019re close to completing with pieces',
+  'Grab bins': 'Get the live 7 days from the codex, read in your own browser',
 };
 const LIST_VIEWS = ['Shopping List', 'All Items', ...GROUPS];
 const OLD_VIEWS = { Dashboard: 'Home', 'My Items': 'Items', 'Task List': 'Tasks', 'Contribution Bins': 'Bins' };
@@ -238,7 +239,7 @@ function updatedText() {
   return `Requests updated ${shortDate(day)}`;
 }
 function renderView() {
-  const views = { Home: viewHome, Items: viewItems, Tasks: viewTasks, Bins: viewBins, More: viewMore, 'Daily Schedule': viewSchedule, Recipes: viewRecipes, 'Clothing progress': viewClothingProgress };
+  const views = { Home: viewHome, Items: viewItems, Tasks: viewTasks, Bins: viewBins, More: viewMore, 'Daily Schedule': viewSchedule, Recipes: viewRecipes, 'Clothing progress': viewClothingProgress, 'Grab bins': viewGrabBins };
   $('#view').innerHTML = (views[S.view] || viewList)();
   if (S.view === 'Items') fillItems();
   if (LIST_VIEWS.includes(S.view)) fillList();
@@ -253,7 +254,8 @@ function staleBanner() {
   const last = ds[ds.length - 1] || '';
   if (S.updating || (at === today && last >= addDays(today, 6))) return '';
   const why = !ds.length ? 'No upcoming bin requests are saved.' : at !== today ? `Requests were last updated ${at ? shortDate(at) : 'a while ago'}.` : `The saved requests only go to ${shortDate(last)}.`;
-  return `<div class="banner"><span class="small">${why} Update to get today and the week ahead.</span><button class="btn primary small" data-act="update">\u21bb Update requests</button></div>`;
+  return `<div class="banner"><span class="small">${why} The codex\u2019s saved pages can be a few days old \u2013 use <b>Grab bins</b> on loftiacodex.com for the live week.</span>
+    <button class="btn small" data-act="go" data-v="Grab bins">How?</button><button class="btn primary small" data-act="update">\u21bb Update requests</button></div>`;
 }
 function nextBinDay() {
   const ds = S.model.dates(), t = todayISO();
@@ -676,6 +678,67 @@ function viewClothingProgress() {
     : '<div class="card empty-card"><b>No clothing in progress</b><p class="small muted">Add pieces on the Items page (Fragments tab) and they\u2019ll show up here.</p></div>';
 }
 
+// ───────── Grab bins bookmark ─────────
+const DASH_URL = location.origin + location.pathname;
+let bookmarkCode = '';
+async function buildBookmark() {
+  if (bookmarkCode) return bookmarkCode;
+  const src = await (await fetch('js/grab-bins.js', { cache: 'no-cache' })).text();
+  const code = src.replace('__DASHBOARD_URL__', DASH_URL).split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('//')).join('\n');
+  bookmarkCode = 'javascript:' + encodeURIComponent(code);
+  return bookmarkCode;
+}
+function viewGrabBins() {
+  setTimeout(async () => { const a = $('#bm-link'); if (a) a.href = await buildBookmark(); }, 0);
+  return `<div class="card"><h3 class="cardtitle">Why a bookmark?</h3>
+      <p class="small">The codex works out each bin\u2019s week in your browser. The page it sends is saved ahead of time and can be days old, and it blocks automated visitors from servers. So the reliable way to get the live 7 days is to read them where you see them: in your own browser, on loftiacodex.com.</p>
+      <p class="small"><b>How it works:</b> open loftiacodex.com, tap the <b>Grab bins</b> bookmark, and it opens the nine bin pages in the background, reads each live week and rotation, then brings you back here to save them. It takes about half a minute.</p></div>
+    <div class="card"><h3 class="cardtitle">On a computer</h3>
+      <p class="small">Drag this button to your bookmarks bar (show the bar with Ctrl+Shift+B, or Cmd+Shift+B on a Mac):</p>
+      <p><a id="bm-link" class="btn primary" href="#" onclick="event.preventDefault(); alert('Drag this button to your bookmarks bar, then click it while you\u2019re on loftiacodex.com.')">\u{1F4E5} Grab bins</a></p>
+      <p class="small muted">Then open loftiacodex.com and click it.</p></div>
+    <div class="card"><h3 class="cardtitle">On an iPhone or iPad (Safari)</h3>
+      <ol class="small" style="padding-left:20px;margin:0">
+        <li>Tap <b>Copy bookmark code</b> below.</li>
+        <li>Bookmark any page: tap the Share button \u2192 <b>Add Bookmark</b>, name it <b>Grab bins</b>, and save.</li>
+        <li>Open your bookmarks, tap <b>Edit</b>, tap the <b>Grab bins</b> bookmark, delete its address and paste the code in its place. Tap Done.</li>
+        <li>Open loftiacodex.com, then open your bookmarks and tap <b>Grab bins</b>.</li></ol>
+      <p style="margin-top:12px"><button class="btn primary" data-act="copy-bookmark">Copy bookmark code</button></p>
+      <p class="tiny muted">Android Chrome works the same way: save a bookmark, edit its address, then on loftiacodex.com type \u201cGrab bins\u201d in the address bar and pick the bookmark.</p></div>`;
+}
+async function copyBookmark() {
+  const code = await buildBookmark();
+  try { await navigator.clipboard.writeText(code); toast('Bookmark code copied'); }
+  catch {
+    const ta = document.createElement('textarea'); ta.value = code; document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); toast('Bookmark code copied'); } catch { await infoBox('Copy this code', code.slice(0, 200) + '\u2026'); }
+    ta.remove();
+  }
+}
+/** Bins sent back by the Grab bins bookmark (in the address after #grab=). */
+function takeGrab() {
+  let raw = null;
+  if (location.hash.startsWith('#grab=')) {
+    raw = location.hash.slice(6);
+    try { sessionStorage.setItem('loftia-grab', raw); } catch { /* private mode */ }
+    history.replaceState(null, '', location.pathname + location.search);
+  } else {
+    try { raw = sessionStorage.getItem('loftia-grab'); } catch { /* ignore */ }
+  }
+  if (!raw) return null;
+  try { return JSON.parse(decodeURIComponent(raw)); } catch { try { sessionStorage.removeItem('loftia-grab'); } catch { /* ignore */ } return null; }
+}
+async function offerGrab() {
+  const g = takeGrab();
+  if (!g || !S.model) return;
+  try { sessionStorage.removeItem('loftia-grab'); } catch { /* ignore */ }
+  const ds = [...new Set((g.schedule || []).map((r) => r.date))].filter((d) => d >= todayISO()).sort();
+  if (!ds.length) { await infoBox('Nothing new', 'The grabbed bins didn\u2019t include today or any days ahead.'); return; }
+  const bins = new Set(g.schedule.map((r) => r.bin)).size;
+  const ok = await confirmBox('Save the live bins?', `Grabbed from the codex in your browser:\n\n\u2022 ${bins} bins\n\u2022 ${rangeText(ds[0], ds[ds.length - 1])} (${ds.length} days)${g.failed?.length ? `\n\u2022 Couldn\u2019t read: ${g.failed.join(', ')} (their last saved requests are kept)` : ''}\n\nThis replaces the bin requests on your dashboard. Your items and completed bins aren\u2019t changed.`, 'Save');
+  if (ok) runUpdate(g);
+}
+
 // ───────── More ─────────
 function viewMore() {
   const m = S.model;
@@ -749,6 +812,7 @@ const ACT = {
   'mark-day': (d) => markDay(d.d),
   'task-filter': (d) => { S.ui.taskFilter = d.v; persist(); renderView(); },
   'task-mode': (d) => { S.ui.taskMode = d.v; persist(); renderView(); },
+  'copy-bookmark': () => copyBookmark(),
   'set-order': (d) => { S.ui.order = d.v; persist(); S._db = null; refresh(); toast(d.v === 'game' ? 'Items now follow the game\u2019s order' : 'Items now sorted A\u2013Z'); },
   'undo-find': (d) => undoFind(Number(d.id)),
   'sched-day': (d) => { S.ui.schedDay = d.d; persist(); renderView(); },
@@ -830,13 +894,13 @@ async function undoFind(id) {
 }
 
 // ───────── Update requests & Refresh item data ─────────
-async function runUpdate() {
+async function runUpdate(live = null) {
   if (S.updating) return;
   S.updating = true; refresh();
   toast('Checking loftiacodex.com\u2026', '\u21bb');
   try {
     const before = JSON.stringify(S.model.schedule.map((r) => [r.date, r.bin, r.name, r.quantity]).sort());
-    const data = await db.runUpdate(todayISO(), Object.keys(RECIPE_BOOK));
+    const data = await db.runUpdate(todayISO(), Object.keys(RECIPE_BOOK), live);
     const old = S.model;
     S.model = new Model(data, old.itemsData);
     S.model.have = old.have; S.model.completions = old.completions; S.model.done = old.done;
@@ -1225,6 +1289,7 @@ document.addEventListener('keydown', (e) => {
 
 // ───────── start ─────────
 async function start() {
+  if (location.hash.startsWith('#grab=')) takeGrab();   // keep grabbed bins safe until you're signed in
   if (!db.configured) { render(); return; }
   S.session = await db.session();
   db.onAuth(async (s) => {
@@ -1237,7 +1302,7 @@ async function start() {
   if (S.session) await loadOrFail();
 }
 async function loadOrFail() {
-  try { await reloadAll(); render(); } catch (e) {
+  try { await reloadAll(); render(); offerGrab(); } catch (e) {
     root.innerHTML = `<div class="signin"><div class="card"><h1 style="font:600 22px var(--display)">Couldn\u2019t load your data</h1>
       <p class="small">${esc(e.message)}</p><p class="small muted">If this is a new setup, check that you ran <b>supabase/schema.sql</b> in the Supabase SQL Editor.</p>
       <button class="btn primary" onclick="location.reload()">Try again</button></div></div>`;

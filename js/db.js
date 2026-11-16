@@ -75,10 +75,10 @@ async function callFn(body) {
   if (data?.error) throw new Error(data.error);
   return data;
 }
-export async function runUpdate(today, knownDishes) {
-  // the live list saved by the "Update bin requests" GitHub Action, next to this website
+export async function runUpdate(today, knownDishes, live = null) {
+  // live = bins grabbed from the codex in your browser; otherwise a saved live list next to this website is tried
   const liveUrl = new URL('data/requests-live.json', location.href).href;
-  return (await callFn({ today, known_dishes: knownDishes, live_url: liveUrl })).data;
+  return (await callFn({ today, known_dishes: knownDishes, live_url: liveUrl, ...(live ? { live } : {}) })).data;
 }
 /** "Refresh item data": step 1 reads the item list, step 2 reads item pages in batches */
 export async function itemCatalog() { return callFn({ action: 'catalog' }); }
