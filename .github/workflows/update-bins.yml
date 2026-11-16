@@ -1,0 +1,42 @@
+# Reads the live bin requests from loftiacodex.com with a real browser and saves them to data/requests-live.json.
+# The website's "Update requests" button uses this file first. Runs every 4 hours, or on demand from the Actions tab.
+name: Update bin requests
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '23 */4 * * *'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-bins
+  cancel-in-progress: false
+
+jobs:
+  read-bins:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install a browser
+        run: |
+          npm install --no-save --no-package-lock playwright@1.48.2
+          npx playwright install --with-deps chromium
+      - name: Read the bin pages
+        run: node tools/read-bins.mjs
+      - name: Save to the repository
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git add data/requests-live.json
+          if git diff --cached --quiet; then
+            echo "Bin requests unchanged."
+          else
+            git commit -m "Update bin requests from loftiacodex.com"
+            git pull --rebase --autostash || true
+            git push
+          fi
