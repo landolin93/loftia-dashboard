@@ -67,14 +67,20 @@ def main():
         print(f'Could not read the item list (HTTP {status}).'); sys.exit(1)
     items = item_slugs(body.decode('utf-8', 'replace'))
     print(f'{len(items)} gathered items to check for spots')
-    spots = {}
+    spots, skipped = {}, []
     for i, slug in enumerate(items):
         st, _, page = download(f'{SITE}/items/{slug}/')
         if st < 400:
             for s in re.findall(r'/spots/([a-z0-9-]+)', page.decode('utf-8', 'replace')):
                 spots.setdefault(s, set()).add(slug)
-        time.sleep(0.1)
-    print(f'{len(spots)} gathering spots found')
+        else:
+            skipped.append(slug)
+        if (i + 1) % 50 == 0:
+            print(f'  checked {i + 1} of {len(items)} items, {len(spots)} spots so far')
+        time.sleep(0.3)   # be gentle with the fan site
+    print(f'{len(spots)} gathering spots found' + (f' ({len(skipped)} item pages could not be read: {", ".join(skipped[:10])})' if skipped else ''))
+    if not spots:
+        print('No spots found - the item pages could not be read. The last saved map is kept.'); sys.exit(1)
     reader = open(os.path.join(HERE, 'spot-page-reader.js'), encoding='utf-8').read()
     ready = '() => { try { const r = ' + reader.strip().rstrip(';') + '; return r.found && r.lines.length > 0; } catch (e) { return false; } }'
     out, failed, shown = {}, [], False

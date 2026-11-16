@@ -12,6 +12,7 @@ import json
 import os
 import re
 import sys
+import time
 import urllib.error
 import urllib.request
 
@@ -20,7 +21,8 @@ from playwright.sync_api import sync_playwright
 SITE = os.environ.get('CODEX_SITE', 'https://loftiacodex.com').rstrip('/')
 OUT = os.environ.get('OUT_FILE', 'data/requests-live.json')
 HERE = os.path.dirname(os.path.abspath(__file__))
-WAIT_MS = int(os.environ.get('WAIT_MS', '30000'))   # how long to wait for a day list (tests use less)
+WAIT_MS = int(os.environ.get('WAIT_MS', '30000'))
+DL_TIMEOUT = float(os.environ.get('DL_TIMEOUT', '30'))   # seconds to wait for one download   # how long to wait for a day list (tests use less)
 UA = 'LoftiaDashboard/1.0 (personal bin tracker; https://github.com)'
 BINS = [
     ('floating-village-bin-lv1', 'Floating Village', 'Floating Village Lv.1'), ('floating-village-bin-lv2', 'Floating Village', 'Floating Village Lv.2'),
@@ -49,16 +51,25 @@ SNAPSHOT = r"""() => {
 _cache = {}
 
 
-def download(url):
-    """Plain download (no browser) -> (status, content type, bytes). Cached for the run."""
+def download(url, tries=3):
+    """Plain download (no browser) -> (status, content type, bytes). Cached for the run.
+    A slow or dropped connection is retried; if it keeps failing the status is 599 (treated as a failure)."""
     if url in _cache:
         return _cache[url]
     req = urllib.request.Request(url, headers={'User-Agent': UA, 'Accept': '*/*'})
-    try:
-        with urllib.request.urlopen(req, timeout=30) as r:
-            res = (r.status, r.headers.get('Content-Type', 'application/octet-stream'), r.read())
-    except urllib.error.HTTPError as e:
-        res = (e.code, e.headers.get('Content-Type', 'text/plain'), e.read() or b'')
+    res = (599, 'text/plain', b'')
+    for attempt in range(1, tries + 1):
+        try:
+            with urllib.request.urlopen(req, timeout=DL_TIMEOUT) as r:
+                res = (r.status, r.headers.get('Content-Type', 'application/octet-stream'), r.read())
+            break
+        except urllib.error.HTTPError as e:
+            res = (e.code, e.headers.get('Content-Type', 'text/plain'), e.read() or b'')
+            if e.code not in (429, 500, 502, 503, 504):
+                break
+        except Exception:   # noqa: BLE001 - timeouts, dropped connections
+            res = (599, 'text/plain', b'')
+        time.sleep(2 * attempt)   # back off before trying again
     _cache[url] = res
     return res
 
