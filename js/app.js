@@ -478,9 +478,11 @@ function renderSheet() {
     <div class="make-row"><div class="stepper"><button class="btn" data-act="rec-n" data-d="-1" aria-label="Fewer">\u2212</button><b>${sh.recN}</b><button class="btn" data-act="rec-n" data-d="1" aria-label="More">+</button></div>
       <button class="btn" data-act="sheet-recycle" ${have >= sh.recN ? '' : 'disabled'}>Recycle ${sh.recN}</button></div></div>` : '';
   const places = m.spotsFor(name);
+  const ownWhere = [det.district || info.district ? `District: ${det.district || info.district}` : '', det.location || info.location ? `Found in: ${det.location || info.location}` : ''].filter(Boolean).join(' \u00b7 ');
   const whereSec = places.length ? `<div class="sec"><div class="row-h"><b class="small">Where to find it</b><span class="tiny muted">best first</span></div>
+    ${ownWhere ? `<div class="tiny" style="margin:4px 0 6px;font-weight:700">${esc(ownWhere)}</div>` : ''}
     <div class="ing-list">${places.slice(0, S.sheet.allSpots ? 60 : 6).map((p) => p.kind === 'spot'
-      ? `<div class="ing"><span class="grow"><b>${esc(p.spotName)}</b><span class="tiny muted" style="display:block">${esc([p.district, p.area ? areaWord(p.area) : '', p.count ? `${p.count} spots` : ''].filter(Boolean).join(' \u00b7 ') || 'location on the map not read yet')}${p.tool ? ` \u00b7 ${esc(p.tool)}` : ''}${p.respawn ? ` \u00b7 back in ${esc(p.respawn)}` : ''}</span></span><b class="small">\u00d7${p.min === p.max ? p.max : `${p.min}\u2013${p.max}`}</b></div>`
+      ? `<div class="ing"><span class="grow"><b>${esc(p.spotName)}</b><span class="tiny muted" style="display:block">${esc([p.district, p.area ? areaWord(p.area) : '', p.location || '', p.count ? `${p.count} spots` : '', p.learned ? 'district worked out from other items' : ''].filter(Boolean).join(' \u00b7 ') || 'location on the map not read yet')}${p.tool ? ` \u00b7 ${esc(p.tool)}` : ''}${p.respawn ? ` \u00b7 back in ${esc(p.respawn)}` : ''}</span></span><b class="small">\u00d7${p.min === p.max ? p.max : `${p.min}\u2013${p.max}`}</b></div>`
       : `<div class="ing"><span class="grow"><b>${esc(p.location || p.district)}</b><span class="tiny muted" style="display:block">${esc(p.location ? p.district : '')}</span></span></div>`).join('')}</div>
     ${places.length > 6 ? `<button class="linkish small" data-act="sheet-spots">${S.sheet.allSpots ? 'Show fewer' : `Show all ${places.length} places`}</button>` : ''}</div>` : '';
   let rel = '';

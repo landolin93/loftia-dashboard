@@ -161,6 +161,16 @@ export class Model {
     // full district names ("gridfall" -> "The Gridfall") from item pages
     this.districtNames = new Map();
     for (const d of Object.values(details)) if (d && d.district) this.districtNames.set(d.district.toLowerCase().replace(/^the\s+/, '').replace(/[^a-z0-9]+/g, '-'), d.district);
+    // A spot is in a district if items found in that district are gathered there (e.g. Rattan: The Hanging Gardens).
+    this.spotDistricts = new Map();
+    for (const d of Object.values(details)) {
+      if (!d || !d.district || !d.gather) continue;
+      for (const g of d.gather) {
+        if (!this.spotDistricts.has(g.slug)) this.spotDistricts.set(g.slug, new Map());
+        const m = this.spotDistricts.get(g.slug);
+        m.set(d.district, (m.get(d.district) || 0) + 1);
+      }
+    }
     this.pieceOf = new Map();       // piece name -> {clothing, qty}
     this.piecesFor = new Map();     // clothing name -> {piece, qty}
     for (const [c, names] of Object.entries(cat)) {
@@ -423,8 +433,13 @@ export class Model {
         // live map: one source per district that has this spot (in the right area, if the drop needs one)
         const hint = g.district ? this.districtName(g.district) : '';
         const spots = where.filter((w) => w.district && (!area || !w.area || w.area.toLowerCase() === String(area).toLowerCase()) && (!hint || w.district === hint));
-        if (spots.length) for (const w of spots) out.push({ ...base, district: w.district, count: w.count });
-        else out.push({ ...base, district: this.districtName(g.district || det.district || ''), count: null });
+        if (spots.length) { for (const w of spots) out.push({ ...base, district: w.district, count: w.count }); continue; }
+        // No live map for this spot: use the item's own District / Found In, or what other items say about the spot.
+        const own = this.districtName(g.district || det.district || '');
+        if (own) { out.push({ ...base, district: own, location: !area ? (det.location || '') : '', count: null }); continue; }
+        const learned = !area && this.spotDistricts.has(g.slug) ? [...this.spotDistricts.get(g.slug).keys()] : [];
+        if (learned.length) for (const dname of learned) out.push({ ...base, district: dname, count: null, learned: true });
+        else out.push({ ...base, district: '', count: null });
       }
     }
     if (!out.length) {
@@ -460,9 +475,9 @@ export class Model {
       for (const src of this.sourcesFor(t.name)) {
         reachable.add(t.key);
         const pk = src.kind === 'spot'
-          ? (src.district || src.area ? `${src.district}|${src.area || ''}` : `spot:${src.spot}`)
-          : `${src.district}|loc:${src.location}`;
-        if (!places.has(pk)) places.set(pk, { key: pk, district: src.district || '', area: src.area || '', location: src.kind === 'place' ? src.location : '', spots: new Map(), items: new Map() });
+          ? (src.district || src.area ? `${src.district}|${src.area || ''}|${src.location || ''}` : `spot:${src.spot}`)
+          : `${src.district}||${src.location}`;
+        if (!places.has(pk)) places.set(pk, { key: pk, district: src.district || '', area: src.area || '', location: src.location || '', spots: new Map(), items: new Map() });
         const P = places.get(pk);
         if (src.kind === 'spot') {
           if (!P.spots.has(src.spot)) P.spots.set(src.spot, { slug: src.spot, name: src.spotName, tool: src.tool, keys: new Set() });
