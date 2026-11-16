@@ -142,6 +142,12 @@ h3.cardtitle { font: 600 19px var(--display); margin: 0; }
 .inv-cell:active .inv { transform: scale(.97); }
 .inv img, .inv .ph { width: 68% !important; height: 68% !important; object-fit: contain; }
 .sort-l { flex: none; align-self: center; margin-left: auto; padding-left: 10px; }
+.sort-l0 { flex: none; align-self: center; padding-right: 2px; }
+.select-chip { position: relative; display: inline-flex; align-items: center; padding: 0; flex: none; }
+.select-chip select { appearance: none; -webkit-appearance: none; border: 0; background: transparent; font: inherit; font-weight: 700; color: inherit; padding: 5px 28px 5px 12px; cursor: pointer; border-radius: 999px; }
+.select-chip::after { content: '\25BE'; position: absolute; right: 11px; pointer-events: none; font-size: 11px; }
+.select-chip.on select option { color: var(--ink); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 .inv .count { position: absolute; left: 8px; bottom: 4px; font: 700 22px/1 var(--display); color: var(--ink); -webkit-text-stroke: 4px #fff; paint-order: stroke fill; }
 .inv .count small { font-size: 13px; color: var(--muted); }
 .inv .rar { position: absolute; top: 5px; right: 8px; font-size: 13px; letter-spacing: -2px; }
