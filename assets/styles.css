@@ -143,6 +143,10 @@ h3.cardtitle { font: 600 19px var(--display); margin: 0; }
 .small-seg { margin: 0; }
 .small-seg button { padding: 4px 12px; font-size: 13px; }
 .cp .row-h { margin-bottom: 12px; }
+.pick-chip { display: inline-flex; align-items: center; gap: 6px; background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 3px 4px 3px 6px; font-size: 13px; font-weight: 700; }
+.pick-chip .x { border: 0; background: #F3E6D4; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; font-size: 11px; }
+.bonus { border-top: 1px dashed var(--line); margin-top: 12px; }
+.task .titles .small { line-height: 1.35; }
 
 /* ───────── tiles (in-game inventory style) ───────── */
 .inv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 14px 12px; }
