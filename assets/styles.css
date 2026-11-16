@@ -131,6 +131,16 @@ h3.cardtitle { font: 600 19px var(--display); margin: 0; }
 .tabs-scroll { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; -webkit-overflow-scrolling: touch; }
 .tabs-scroll::-webkit-scrollbar { display: none; }
 .tabs-scroll .chip { flex: none; }
+.chips.wrap { flex-wrap: wrap; }
+.filters { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.select-chip .sel-l { padding-left: 12px; color: var(--muted); font-weight: 700; }
+.select-chip.on .sel-l { color: rgba(255,255,255,.85); }
+.select-chip select { padding-left: 6px !important; }
+.select-chip.on select { color: #fff; }
+.warn-inline { color: var(--orange-dk); font-weight: 700; }
+.small-seg { margin: 0; }
+.small-seg button { padding: 4px 12px; font-size: 13px; }
+.cp .row-h { margin-bottom: 12px; }
 
 /* ───────── tiles (in-game inventory style) ───────── */
 .inv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 14px 12px; }
@@ -144,7 +154,7 @@ h3.cardtitle { font: 600 19px var(--display); margin: 0; }
 .sort-l { flex: none; align-self: center; margin-left: auto; padding-left: 10px; }
 .sort-l0 { flex: none; align-self: center; padding-right: 2px; }
 .select-chip { position: relative; display: inline-flex; align-items: center; padding: 0; flex: none; }
-.select-chip select { appearance: none; -webkit-appearance: none; border: 0; background: transparent; font: inherit; font-weight: 700; color: inherit; padding: 5px 28px 5px 12px; cursor: pointer; border-radius: 999px; }
+.select-chip select { appearance: none; -webkit-appearance: none; border: 0; background: transparent; font: inherit; font-weight: 700; color: inherit; padding: 5px 28px 5px 12px; cursor: pointer; border-radius: 999px; max-width: 220px; }
 .select-chip::after { content: '\25BE'; position: absolute; right: 11px; pointer-events: none; font-size: 11px; }
 .select-chip.on select option { color: var(--ink); }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
@@ -278,7 +288,12 @@ details.dish .ings { padding: 0 0 10px 44px; display: grid; grid-template-column
   .hdr-up .lbl { display: none; }
   .hdr-up { padding: 9px 13px; font-size: 17px; }
   .main { padding: 12px 12px calc(96px + env(safe-area-inset-bottom)); }
-  .sticky-tools { top: 58px; }
+  .sticky-tools { position: static; padding-top: 2px; }
+  .filters { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .filters .select-chip { width: 100%; min-width: 0; }
+  .filters .select-chip select { width: 100%; max-width: none; flex: 1; min-width: 0; text-overflow: ellipsis; }
+  .filters > .chip:not(.select-chip) { justify-self: start; }
+  .chips.wrap .chip { padding: 4px 10px; }
   .hero { flex-direction: column; align-items: flex-start; padding: 20px; }
   .hero .when { font-size: 32px; }
   .hero .pct { margin-left: 0; text-align: left; }
