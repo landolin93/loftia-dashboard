@@ -8,7 +8,7 @@
   const box = document.createElement('div');
   for (let el = h.nextElementSibling; el && !/^H[12]$/.test(el.tagName); el = el.nextElementSibling) box.appendChild(el.cloneNode(true));
   // if the heading sits inside its own wrapper, take the wrapper's following content instead
-  if (!box.textContent.trim() && h.parentElement) {
+  if (!box.textContent.trim() && !box.querySelector('[aria-label],[title]') && h.parentElement) {
     for (let el = h.parentElement.nextElementSibling; el && !el.querySelector('h1,h2') && !/^H[12]$/.test(el.tagName); el = el.nextElementSibling) box.appendChild(el.cloneNode(true));
   }
   const lines = [];
@@ -19,6 +19,13 @@
     }
   };
   walk(box);
+  // map markers often carry their place in a label rather than visible text
+  for (const el of box.querySelectorAll('[aria-label],[title],[data-district],[data-area],[data-name]')) {
+    for (const v of [el.getAttribute('aria-label'), el.getAttribute('title'), el.dataset.district, el.dataset.area, el.dataset.name]) {
+      const t = (v || '').replace(/\s+/g, ' ').trim();
+      if (t && t.length < 60 && !lines.includes(t)) lines.push(t);
+    }
+  }
   const links = [...box.querySelectorAll('a[href]')].map((a) => ({ text: a.textContent.replace(/\s+/g, ' ').trim(), href: a.getAttribute('href') }));
   return { found: true, lines: lines.slice(0, 200), links: links.slice(0, 100) };
 })()

@@ -22,7 +22,7 @@ from read_bins import SITE, download, serve   # same plain-download + local brow
 
 OUT = os.environ.get('OUT_FILE', 'data/spots-live.json')
 HERE = os.path.dirname(os.path.abspath(__file__))
-WAIT_MS = int(os.environ.get('WAIT_MS', '20000'))
+WAIT_MS = int(os.environ.get('WAIT_MS', '6000'))   # most spot pages only show a picture map, so don't wait long
 DISCOVERY_BUDGET = int(os.environ.get('DISCOVERY_SECONDS', '1200'))   # stop looking for new spots after 20 minutes
 CATEGORIES = {'materials', 'crops', 'flowers', 'artifacts', 'item fragments'}
 
@@ -30,11 +30,34 @@ CATEGORIES = {'materials', 'crops', 'flowers', 'artifacts', 'item fragments'}
 SECTION_SNAPSHOT = r"""() => {
   const h = [...document.querySelectorAll('h1,h2,h3')].find((x) => /where to find it/i.test(x.textContent));
   if (!h) return '(no "Where to find it" heading)';
+  const wrap = h.closest('header, section, div') || h;
   let html = '';
-  for (let el = h.nextElementSibling, k = 0; el && k < 6 && !/^H[12]$/.test(el.tagName); el = el.nextElementSibling, k++) html += el.outerHTML;
-  if (!html && h.parentElement) html = h.parentElement.outerHTML;
-  return html.replace(/\s+/g, ' ').slice(0, 1500) || '(nothing after the heading)';
+  for (let el = wrap === h ? h.nextElementSibling : wrap.nextElementSibling, k = 0; el && k < 3; el = el.nextElementSibling, k++) {
+    if (el.querySelector && el.querySelector('h1,h2')) break;
+    html += el.outerHTML;
+  }
+  html = html.replace(/\sd="[^"]{40,}"/g, ' d="..."').replace(/base64,[^"]{40,}/g, 'base64,...').replace(/\s+/g, ' ');
+  return html.slice(0, 2500) || '(nothing after the heading)';
 }"""
+
+
+MODEL_DISTRICTS = {'lc': 'Loftia City', 'hg': 'The Hanging Gardens', 'sd': 'The Gridfall'}
+
+
+def model_district(model):
+    """'sd-oven-sd-oven' -> 'The Gridfall'; 'golden-treasure-chest-th-chest-hg-golden' -> 'The Hanging Gardens'"""
+    m = re.search(r'(?:^|-)(lc|hg|sd)-', model or '')
+    return MODEL_DISTRICTS.get(m.group(1)) if m else None
+
+
+def item_spot_links(page_html):
+    """Real spot links on an item page -> {spot slug: picture name}. (Picture files like
+    models/spots/sd-oven-sd-oven.webp are not spot pages, so they're only used for the name.)"""
+    out = {}
+    for m in re.finditer(r'<a[^>]+href="[^"]*/spots/([a-z0-9-]+)[^"]*"[^>]*>(.*?)</a>', page_html, re.S):
+        pic = re.search(r'/models/spots/([a-z0-9-]+)\.(?:webp|png)', m.group(2))
+        out.setdefault(m.group(1), pic.group(1) if pic else None)
+    return out
 
 
 def item_slugs(list_html):
@@ -85,7 +108,7 @@ def main():
         prev = json.load(open(OUT, encoding='utf-8'))
     except Exception:   # noqa: BLE001 - first run
         prev = {}
-    item_spots = {k: v for k, v in (prev.get('item_spots') or {}).items() if k in items}
+    item_spots = {k: v for k, v in (prev.get('item_spots') or {}).items() if k in items and isinstance(v, dict)}   # older runs saved a plain list
     todo = [s_ for s_ in items if s_ not in item_spots]
     print(f'{len(items) - len(todo)} items remembered from last time, {len(todo)} to check', flush=True)
     skipped, started = [], time.time()
@@ -95,7 +118,7 @@ def main():
         time.sleep(0.25)   # be gentle with the fan site
         if st >= 400:
             return slug, None
-        return slug, sorted(set(re.findall(r'/spots/([a-z0-9-]+)', page.decode('utf-8', 'replace'))))
+        return slug, item_spot_links(page.decode('utf-8', 'replace'))
 
     with ThreadPoolExecutor(max_workers=4) as pool:
         futures = [pool.submit(check, s_) for s_ in todo]
@@ -112,10 +135,12 @@ def main():
                 for g in futures:
                     g.cancel()
                 break
-    spots = {}
+    spots, pictures = {}, {}
     for slug, found in item_spots.items():
-        for s_ in found:
+        for s_, pic in found.items():
             spots.setdefault(s_, set()).add(slug)
+            if pic:
+                pictures.setdefault(s_, set()).add(pic)
     print(f'{len(spots)} gathering spots found' + (f' ({len(skipped)} item pages could not be read: {", ".join(skipped[:10])})' if skipped else ''), flush=True)
     if not spots:
         print('No spots found - the item pages could not be read. The last saved map is kept.'); sys.exit(1)
@@ -139,6 +164,11 @@ def main():
                 page.wait_for_timeout(1000)
                 res = page.evaluate(reader)
                 rows = parse_where(res.get('lines') or [], res.get('links') or [])
+                guess = sorted({d for d in (model_district(p_) for p_ in pictures.get(slug, ())) if d})
+                if not rows and guess:
+                    out[slug] = {'name': page.title().split(' -- ')[0].strip(), 'where': [], 'guess': guess}
+                    print(f'OK   [{len(out)}/{len(spots)}] {slug}: {", ".join(guess)} (from the spot picture - the map has no text)')
+                    continue
                 if not rows:
                     if shown < 2:   # show what an empty page looked like (twice), to adjust the reader
                         snap = page.evaluate(SECTION_SNAPSHOT)
@@ -148,7 +178,7 @@ def main():
                         print('----')
                         shown += 1
                     raise RuntimeError('"Where to find it" stayed empty')
-                out[slug] = {'name': page.title().split(' -- ')[0].strip(), 'where': rows}
+                out[slug] = {'name': page.title().split(' -- ')[0].strip(), 'where': rows, 'guess': guess}
                 print(f'OK   [{len(out)}/{len(spots)}] {slug}: ' + ', '.join(f"{r['label']}{' ' + str(r['count']) if r['count'] is not None else ''}" for r in rows[:6]))
             except Exception as e:   # noqa: BLE001
                 failed.append(slug)
