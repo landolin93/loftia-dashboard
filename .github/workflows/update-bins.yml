@@ -29,14 +29,19 @@ jobs:
       - name: Read the bin pages
         run: node tools/read-bins.mjs
       - name: Save to the repository
+        if: success()
         run: |
+          if [ ! -f data/requests-live.json ]; then echo "Nothing was saved this time."; exit 0; fi
           git config user.name "github-actions[bot]"
           git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
           git add data/requests-live.json
           if git diff --cached --quiet; then
             echo "Bin requests unchanged."
-          else
-            git commit -m "Update bin requests from loftiacodex.com"
-            git pull --rebase --autostash || true
-            git push
+            exit 0
+          fi
+          git commit -m "Update bin requests from loftiacodex.com"
+          git pull --rebase --autostash || true
+          if ! git push; then
+            echo "::error::GitHub didn't allow the action to save. Open Settings > Actions > General, choose 'Read and write permissions' under Workflow permissions, click Save, then run this again."
+            exit 1
           fi
