@@ -683,8 +683,10 @@ const DASH_URL = location.origin + location.pathname;
 let bookmarkCode = '';
 async function buildBookmark() {
   if (bookmarkCode) return bookmarkCode;
-  const src = await (await fetch('js/grab-bins.js', { cache: 'no-cache' })).text();
-  const code = src.replace('__DASHBOARD_URL__', DASH_URL).split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('//')).join('\n');
+  const [src, reader] = await Promise.all([fetch('js/grab-bins.js', { cache: 'no-cache' }).then((r) => r.text()),
+    fetch('tools/bin-page-reader.js', { cache: 'no-cache' }).then((r) => r.text())]);
+  const readerSrc = reader.split('\n').filter((l) => !l.trim().startsWith('//')).join('\n').trim().replace(/;$/, '');
+  const code = src.replace('__DASHBOARD_URL__', DASH_URL).replace('__READER_SRC__', () => JSON.stringify(readerSrc)).split('\n').map((l) => l.trim()).filter((l) => l && !l.startsWith('//')).join('\n');
   bookmarkCode = 'javascript:' + encodeURIComponent(code);
   return bookmarkCode;
 }

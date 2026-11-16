@@ -21,36 +21,24 @@
   document.body.appendChild(box);
   const say = (t) => { box.textContent = t; };
 
-  const listAfter = (doc, title) => {
-    const h = [...doc.querySelectorAll('h1,h2,h3,h4')].find((x) => x.textContent.trim().toLowerCase().startsWith(title));
-    if (!h) return null;
-    for (let el = h.nextElementSibling; el; el = el.nextElementSibling) {
-      if (/^H[1-4]$/.test(el.tagName)) return null;
-      if (/^(OL|UL)$/.test(el.tagName)) return el;
-      const inner = el.querySelector('ol, ul');
-      if (inner) return inner;
-    }
-    return null;
+  const READER = __READER_SRC__;   // tools/bin-page-reader.js, put in by the dashboard
+  const readIn = (win) => { try { return win.eval(READER); } catch (e) { return { days: [], pool: [] }; } };
+  const schedule = [], pools = {}, failed = [];
+  const good = (r) => r && r.days && r.days.length > 0 && r.days.every((d) => d.items.length > 0);
+  // Live day cards may only show pictures: take the amounts from the matching request in "Every request".
+  const fill = (items, pool) => {
+    if (items.every((it) => it.qty)) return items;
+    const key = (list) => list.map((it) => it.name.toLowerCase()).sort().join('|');
+    const match = (pool || []).find((req) => key(req) === key(items));
+    const amounts = {};
+    for (const req of match ? [match] : (pool || [])) for (const it of req) if (it.qty && !(it.name.toLowerCase() in amounts)) amounts[it.name.toLowerCase()] = it.qty;
+    return items.map((it) => ({ qty: it.qty || amounts[it.name.toLowerCase()] || 1, name: it.name }));
   };
-  const readItem = (a) => {
-    const t = /^\s*(\d+)\s*[x\u00d7]?\s+(.+?)\s*$/.exec(a.getAttribute('title') || '');
-    if (t) return [Number(t[1]), t[2]];
-    const txt = a.textContent.replace(/\s+/g, ' ').trim();
-    let m = /^(\d+)\s+(.+)$/.exec(txt);
-    if (m) return [Number(m[1]), m[2]];
-    const img = a.querySelector('img[alt]');
-    m = /(\d+)/.exec(txt);
-    return img && img.alt.trim() ? [m ? Number(m[1]) : 1, img.alt.trim()] : null;
+  const add = (r, group, bin) => {
+    for (const d of dated(r.days)) for (const it of fill(d.items, r.pool)) schedule.push({ date: d.date, group, bin, name: it.name, quantity: it.qty });
+    const pool = (r.pool || []).map((q) => q.filter((it) => it.qty).map((it) => [it.qty, it.name])).filter((q) => q.length);
+    if (pool.length) pools[bin] = pool;
   };
-  const rows = (list, withLabel) => (list ? [...list.children].filter((li) => li.tagName === 'LI').map((li) => {
-    const items = [...li.querySelectorAll('a[href*="/items/"]')].map(readItem).filter(Boolean);
-    if (!withLabel) return items;
-    const c = li.cloneNode(true);
-    c.querySelectorAll('a').forEach((a) => a.remove());
-    return { label: c.textContent.replace(/\s+/g, ' ').trim(), items };
-  }) : []);
-  const ready = (doc) => { const l = listAfter(doc, 'next seven days'); return !!l && l.querySelectorAll('li a[href*="/items/"]').length > 0; };
-
   const p2 = (n) => String(n).padStart(2, '0');
   const iso = (d) => `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
   const addDays = (s, n) => { const [y, m, d] = s.split('-').map(Number); return iso(new Date(y, m - 1, d + n)); };
@@ -87,16 +75,18 @@
     const timer = setInterval(() => {
       let doc = null;
       try { doc = f.contentDocument; } catch (e) { return finish({ error: 'the page could not be opened in the background' }); }
-      if (doc && doc.location && doc.location.href !== 'about:blank' && ready(doc)) {
-        if (!seen) seen = Date.now();
-        else if (Date.now() - seen > 1500) finish({ days: rows(listAfter(doc, 'next seven days'), true), pool: rows(listAfter(doc, 'every request'), false).filter((r) => r.length) });
+      if (doc && doc.location && doc.location.href !== 'about:blank' && doc.readyState !== 'loading') {
+        const r = readIn(f.contentWindow);
+        if (good(r)) {
+          if (!seen) seen = Date.now();
+          else if (Date.now() - seen > 1500) finish(r);
+        }
       }
       if (Date.now() - start > 30000) finish({ error: 'timed out' });
     }, 300);
     document.body.appendChild(f);
   });
 
-  const schedule = [], pools = {}, failed = [];
   const send = () => {
     const last = schedule.reduce((m, r) => (r.date > m ? r.date : m), '');
     say(`Got ${new Set(schedule.map((r) => r.bin)).size} bins, up to ${last}. Opening your dashboard\u2026`);
@@ -110,7 +100,8 @@
     let saved = {};
     try { saved = JSON.parse(localStorage.getItem('loftia-grab-bins') || '{}'); } catch (e) { saved = {}; }
     if (saved.today !== today) saved = { today, bins: {} };
-    if (here && ready(document)) saved.bins[here[2]] = { days: rows(listAfter(document, 'next seven days'), true), pool: rows(listAfter(document, 'every request'), false).filter((r) => r.length) };
+    const mine = here ? readIn(window) : null;
+    if (here && good(mine)) saved.bins[here[2]] = mine;
     try { localStorage.setItem('loftia-grab-bins', JSON.stringify(saved)); } catch (e) { /* ignore */ }
     const got = Object.keys(saved.bins);
     if (got.length < BINS.length) {
@@ -120,9 +111,7 @@
       return true;
     }
     for (const [slug, group, bin] of BINS) {
-      const r = saved.bins[bin];
-      for (const d of dated(r.days)) for (const [qty, name] of d.items) schedule.push({ date: d.date, group, bin, name, quantity: qty });
-      if (r.pool.length) pools[bin] = r.pool;
+      add(saved.bins[bin], group, bin);
     }
     send();
     return true;
@@ -136,8 +125,7 @@
       n++;
       say(`Grabbing bins from the codex\u2026 ${n} of ${BINS.length}`);
       if (res.error || !res.days || !res.days.length) { failed.push(bin); continue; }
-      for (const d of dated(res.days)) for (const [qty, name] of d.items) schedule.push({ date: d.date, group, bin, name, quantity: qty });
-      if (res.pool && res.pool.length) pools[bin] = res.pool;
+      add(res, group, bin);
     }
   };
   say(`Grabbing bins from the codex\u2026 0 of ${BINS.length}`);
