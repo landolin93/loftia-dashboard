@@ -128,6 +128,7 @@ export class Model {
     }
     this.catalog = cat;
     this.sub = new Map(fetched.map((i) => [i.name, i.sub]));
+    this.listRarity = new Map(fetched.filter((i) => i.rarity).map((i) => [i.name, i.rarity]));
     this.index = new Map();
     for (const [c, names] of Object.entries(cat)) for (const n of names) if (!this.index.has(normName(n))) this.index.set(normName(n), [n, c]);
     this.allNames = [...this.index.values()].map((v) => v[0]).sort((a, b) => a.localeCompare(b));
@@ -142,6 +143,16 @@ export class Model {
         if (p && p.qty > 0) { this.piecesFor.set(n, { piece: p.name, qty: p.qty }); this.pieceOf.set(p.name, { clothing: n, qty: p.qty }); }
       }
     }
+  }
+  /** Clothing you don't own yet but have pieces for, closest to done first. */
+  clothingProgress() {
+    const out = [];
+    for (const [clothing, p] of this.piecesFor) {
+      const have = this.get(this.keyForName(p.piece));
+      if (!have || this.get(this.keyForName(clothing)) > 0) continue;
+      out.push({ clothing, piece: p.piece, have, need: p.qty, left: Math.max(0, p.qty - have), pct: have / p.qty });
+    }
+    return out.sort((a, b) => b.pct - a.pct || a.left - b.left || a.clothing.localeCompare(b.clothing));
   }
   categoryOf(name) { return (this.index.get(normName(name)) || CATALOG_INDEX.get(normName(name)) || ['', 'Other'])[1]; }
   details(name) { return this.detailsBySlug[slugOf(name)] || {}; }
@@ -262,15 +273,17 @@ export class Model {
   // ── item info from the codex (rarity / where to find it) ──
   itemInfo(name) { return this.info[slugify(name)] || {}; }
   /** Rarity from the bin lookups (fish, artifacts) or from "Refresh item data" (everything else). */
-  rarity(name) { return this.itemInfo(name).rarity || (this.detailsBySlug[slugOf(name)] || {}).rarity || ''; }
+  rarity(name) { return (this.detailsBySlug[slugOf(name)] || {}).rarity || this.listRarity.get(name) || this.itemInfo(name).rarity || ''; }
   rarityRank(name) { const i = RARITIES.indexOf(this.rarity(name)); return i < 0 ? RARITIES.length : i; }
   /** Raw materials / Refined materials / Cooked food - from the codex item type. */
   kind(name, category = this.categoryOf(name)) {
     if (category === 'Foods') return 'Cooked food';
     if (category !== 'Materials') return '';
-    const t = (this.detailsBySlug[slugOf(name)] || {}).type || '';
-    if (!t) return '';
-    return /refined/i.test(t) ? 'Refined materials' : 'Raw materials';
+    const d = this.detailsBySlug[slugOf(name)];
+    if (!d) return '';
+    // Anything that can be made from other items (raw materials, crops...) is refined.
+    const made = (d.craft && d.craft.length) || d.crafted_at || /refined/i.test(d.type || '');
+    return made ? 'Refined materials' : 'Raw materials';
   }
   missingInfo() {
     return this.items.filter((i) => TASK_GROUPS.includes(i.group)

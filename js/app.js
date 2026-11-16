@@ -25,9 +25,9 @@ const CAT_TAG = { Materials: '', Crops: 'green', Foods: 'orange', Fishes: 'blue'
 const RARITY_TAG = { Common: '', Uncommon: 'green', Rare: 'blue', 'Very rare': 'lav', Epic: 'lav', Legendary: 'orange' };
 const RARITY_STARS = { Uncommon: ['\u2605', '#5BC8D8'], Rare: ['\u2605\u2605', '#5BC8D8'], 'Very rare': ['\u2605\u2605', '#F2B632'], Epic: ['\u2605\u2605', '#F2B632'], Legendary: ['\u2605\u2605\u2605', '#F2B632'] };
 const TABS = [['Home', 'Spotless Game Guy'], ['Items', 'Gears'], ['Tasks', "Used Gone Fishin'"], ['Bins', 'Carrot Cake'], ['More', 'Used Rubber Duck']];
-const MORE_PAGES = ['Shopping List', 'Floating Village', 'Global Village', 'Museum', 'Cooking Ingredients', 'All Items', 'Daily Schedule', 'Recipes'];
+const MORE_PAGES = ['Clothing progress', 'Shopping List', 'Floating Village', 'Global Village', 'Museum', 'Cooking Ingredients', 'All Items', 'Daily Schedule', 'Recipes'];
 const PAGE_ICONS = {
-  'Shopping List': 'Golden Chest Key', 'All Items': 'Used Rubber Duck', 'Floating Village': 'Rainbow Trout', 'Global Village': 'Potato Soup',
+  'Clothing progress': 'Explorer Hat', 'Shopping List': 'Golden Chest Key', 'All Items': 'Used Rubber Duck', 'Floating Village': 'Rainbow Trout', 'Global Village': 'Potato Soup',
   Museum: 'Used Boombox', 'Cooking Ingredients': 'Carrot', 'Daily Schedule': 'Fried Eggs', Recipes: 'Cooking Station',
 };
 const TITLES = { Home: 'Dashboard', Items: 'My items', Tasks: 'Task list', Bins: 'Contribution bins', More: 'More' };
@@ -39,6 +39,7 @@ const SUBTITLES = {
   'Floating Village': 'Fish and critters for the village bins', 'Global Village': 'Dishes to cook and contribute',
   Museum: 'Toys and artifacts for the museum', 'Cooking Ingredients': 'Raw ingredients \u2013 targets follow the dishes you still need',
   'Daily Schedule': 'Bin requests, day by day', Recipes: 'What every dish needs \u2013 tap one to cook it',
+  'Clothing progress': 'Clothing you\u2019re close to completing with pieces',
 };
 const LIST_VIEWS = ['Shopping List', 'All Items', ...GROUPS];
 const OLD_VIEWS = { Dashboard: 'Home', 'My Items': 'Items', 'Task List': 'Tasks', 'Contribution Bins': 'Bins' };
@@ -88,6 +89,7 @@ const S = {
 };
 S.ui.items = Object.assign({ search: '', tab: 'Materials', owned: false, sort: 'az', dir: 1, sub: 'All', rarity: 'All' }, S.ui.items || {});
 S.ui.listSort = S.ui.listSort || 'need';
+if (S.ui.items.sort === 'rarity') S.ui.items.sort = S.ui.items.dir < 0 ? 'rarity-down' : 'rarity-up';
 S.ui.recSort = S.ui.recSort || 'az';
 const RARITY_ORDER = ['Common', 'Uncommon', 'Rare', 'Very rare', 'Epic', 'Legendary'];
 const CLOTHING_PARTS = ['Hats', 'Tops', 'Bottoms', 'Shoes', 'Accessories', 'Walk Trails'];
@@ -209,7 +211,7 @@ function updatedText() {
   return `Requests updated ${shortDate(day)}`;
 }
 function renderView() {
-  const views = { Home: viewHome, Items: viewItems, Tasks: viewTasks, Bins: viewBins, More: viewMore, 'Daily Schedule': viewSchedule, Recipes: viewRecipes };
+  const views = { Home: viewHome, Items: viewItems, Tasks: viewTasks, Bins: viewBins, More: viewMore, 'Daily Schedule': viewSchedule, Recipes: viewRecipes, 'Clothing progress': viewClothingProgress };
   $('#view').innerHTML = (views[S.view] || viewList)();
   if (S.view === 'Items') fillItems();
   if (LIST_VIEWS.includes(S.view)) fillList();
@@ -265,52 +267,59 @@ function viewHome() {
     <div class="card"><div class="row-h"><h3 class="cardtitle">Next task</h3>${t ? dueTag(t.deadline) : ''}<button class="btn small" data-act="tab" data-v="Tasks">Open tasks</button></div>
       ${t ? `<div class="task-where">${esc(taskTitle(t))} \u2013 ${esc(taskSub(t))}</div><div class="inv-grid sm">${t.items.slice(0, 8).map((e) => taskTile(e)).join('')}</div>`
       : '<div class="muted small">Nothing left to collect \u2013 every open bin has its fish and artifacts covered.</div>'}</div>
+    ${clothingProgressHTML(6)}
     <div class="card"><h3 class="cardtitle">Progress by village</h3><div class="villages">${villages}</div></div>`;
 }
 
 // ───────── Items (add / find anything) ─────────
+/** A compact dropdown that looks like a filter chip (no sideways scrolling). */
+function selectChip(id, label, options, value, allValue = 'All') {
+  return `<label class="chip select-chip ${value !== allValue ? 'on' : ''}"><span class="sel-l">${esc(label)}</span>
+    <select id="${id}" aria-label="${esc(label)}">${options.map(([v, l]) => `<option value="${esc(v)}" ${value === v ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select></label>`;
+}
+const ITEM_SORTS = [['az', 'A\u2013Z'], ['most', 'Most first'], ['fewest', 'Fewest first'], ['rarity-up', 'Rarity: common first'], ['rarity-down', 'Rarity: rarest first']];
 function viewItems() {
   const u = S.ui.items;
-  const sorts = [['az', 'A\u2013Z'], ['most', 'Most'], ['fewest', 'Fewest'], ['rarity', u.sort === 'rarity' && u.dir < 0 ? 'Rarity \u2193' : 'Rarity \u2191']];
   if (!S._db || S._db.model !== S.model) S._db = { model: S.model, rows: S.model.database() };
-  const rarities = RARITY_ORDER.filter((r) => S._db.rows.some((x) => S.model.rarity(x.name) === r));
   return `<div class="sticky-tools">
       <label class="search"><span aria-hidden="true">\u2315</span><input id="items-search" type="search" placeholder="Type to find an item" value="${esc(u.search)}" aria-label="Search items" autocomplete="off" enterkeyhint="search">
         <button class="x" data-act="items-clear" aria-label="Clear search">\u2715</button></label>
-      <div class="tabs-scroll" role="tablist">${['All', ...ADD_TABS].map((c) => `<button class="chip ${u.tab === c ? 'on' : ''}" role="tab" data-act="items-tab" data-v="${c}">${esc(TAB_LABEL[c] || c)}<span class="n"></span></button>`).join('')}</div>
-      <div class="tabs-scroll" id="items-sub"></div>
-      <div class="tabs-scroll"><button class="chip ${u.owned ? 'on' : ''}" data-act="items-owned">Only items I have</button>
-        <label class="chip select-chip ${u.rarity !== 'All' ? 'on' : ''}"><span class="sr">Rarity</span><select id="items-rarity" aria-label="Filter by rarity">
-          ${['All', ...rarities].map((r) => `<option value="${r}" ${u.rarity === r ? 'selected' : ''}>${r === 'All' ? 'All rarities' : r}</option>`).join('')}</select></label>
-        <span class="sort-l small muted">Sort</span>${sorts.map(([v, l]) => `<button class="chip ${u.sort === v ? 'on' : ''}" data-act="items-sort" data-v="${v}">${l}</button>`).join('')}</div></div>
-    <p class="note" id="items-note"></p><div id="items-grid" class="inv-grid"></div>`;
+      <div class="chips wrap" role="tablist">${['All', ...ADD_TABS].map((c) => `<button class="chip ${u.tab === c ? 'on' : ''}" role="tab" data-act="items-tab" data-v="${c}">${esc(TAB_LABEL[c] || c)}<span class="n"></span></button>`).join('')}</div>
+      <div class="filters" id="items-filters"></div></div>
+    <div id="items-extra"></div><p class="note" id="items-note"></p><div id="items-grid" class="inv-grid"></div>`;
 }
 function itemRows() {
   const m = S.model, u = S.ui.items;
   if (!S._db || S._db.model !== m) S._db = { model: m, rows: m.database() };
   const inTab = (r) => u.tab === 'All' || r.category === u.tab || (u.tab === 'Crops' && r.category === 'Flowers');
   const inSub = (r) => u.sub === 'All' || (u.tab === 'Clothing' ? r.sub === u.sub : r.kind === u.sub);
-  const base = S._db.rows.filter((r) => (!u.owned || m.get(r.key) > 0) && (u.rarity === 'All' || m.rarity(r.name) === u.rarity));
   const toks = normName(u.search).split(' ').filter(Boolean);
-  const inTabRows = base.filter((r) => inTab(r) && toks.every((t) => r.search.includes(t)));
-  const subCounts = {};
-  for (const r of inTabRows) { const v = u.tab === 'Clothing' ? r.sub : r.kind; if (v) subCounts[v] = (subCounts[v] || 0) + 1; }
-  const rows = inTabRows.filter(inSub);
+  const matches = (r) => toks.every((t) => r.search.includes(t));
+  const owned = (r) => !u.owned || m.get(r.key) > 0;
+  const rar = (r) => u.rarity === 'All' || (u.rarity === 'Unknown' ? !m.rarity(r.name) : m.rarity(r.name) === u.rarity);
+  const counts = {}, subCounts = {}, rarCounts = {};
+  for (const r of S._db.rows) {
+    if (!matches(r) || !owned(r)) continue;
+    if (rar(r)) { const c = r.category === 'Flowers' ? 'Crops' : r.category; counts[c] = (counts[c] || 0) + 1; counts.All = (counts.All || 0) + 1; }
+    if (!inTab(r)) continue;
+    if (rar(r)) { const v = u.tab === 'Clothing' ? r.sub : r.kind; if (v) subCounts[v] = (subCounts[v] || 0) + 1; }
+    if (inSub(r)) { const rr = m.rarity(r.name) || 'Unknown'; rarCounts[rr] = (rarCounts[rr] || 0) + 1; }
+  }
+  const rows = S._db.rows.filter((r) => matches(r) && owned(r) && rar(r) && inTab(r) && inSub(r));
   const nm = (a, b) => a.name.localeCompare(b.name);
   const by = {
     az: nm, most: (a, b) => m.get(b.key) - m.get(a.key) || nm(a, b), fewest: (a, b) => m.get(a.key) - m.get(b.key) || nm(a, b),
-    rarity: (a, b) => (m.rarityRank(a.name) - m.rarityRank(b.name)) * u.dir || nm(a, b),
+    'rarity-up': (a, b) => m.rarityRank(a.name) - m.rarityRank(b.name) || nm(a, b),
+    'rarity-down': (a, b) => { const x = m.rarityRank(a.name), y = m.rarityRank(b.name), n = RARITY_ORDER.length; return (y >= n ? -1 : y) - (x >= n ? -1 : x) || nm(a, b); },
   };
   rows.sort(by[u.sort] || by.az);
-  const counts = {};
-  for (const r of base) if (toks.every((t) => r.search.includes(t))) { const c = r.category === 'Flowers' ? 'Crops' : r.category; counts[c] = (counts[c] || 0) + 1; counts.All = (counts.All || 0) + 1; }
-  return { rows, counts, toks, subCounts };
+  return { rows, counts, toks, subCounts, rarCounts };
 }
 /** Groups inside a tab: clothing parts, raw / refined materials, cooked food. */
-function subOptions(tab, subCounts) {
+function subOptions(tab) {
   if (tab === 'Clothing') return CLOTHING_PARTS;
-  if (tab === 'Materials') return ['Raw materials', 'Refined materials'].filter((k) => subCounts[k]);
-  if (tab === 'All') return ['Raw materials', 'Refined materials', 'Cooked food'].filter((k) => subCounts[k]);
+  if (tab === 'Materials') return ['Raw materials', 'Refined materials'];
+  if (tab === 'All') return ['Raw materials', 'Refined materials', 'Cooked food'];
   return [];
 }
 function itemTile(r) {
@@ -323,23 +332,46 @@ function itemTile(r) {
     return tile({ k: r.key, name: r.name, count: n ? '\u2713' : '', badge: !n && pieces ? `${pieces}/${pc.qty}` : '', badgeCls: 'orange', dim: !n, sub: r.sub || '' });
   }
   const can = m.recipesFor(r.name).length ? m.maxMake(r.name) : 0;
-  return tile({ k: r.key, name: r.name, count: fmt(n), dim: !n, badge: can ? `make ${can}` : '', badgeCls: 'green' });
+  return tile({ k: r.key, name: r.name, count: fmt(n), dim: !n, badge: can ? `make ${can}` : '', badgeCls: 'green', sub: r.kind && S.ui.items.tab === 'All' ? r.kind.replace(' materials', '') : '' });
+}
+/** Clothing you're close to completing: tiles showing pieces you have, or pieces still needed. */
+function clothingProgressHTML(limit = 0) {
+  const m = S.model, list = m.clothingProgress(), mode = S.ui.cpMode || 'have';
+  if (!list.length) return '';
+  const shown = limit ? list.slice(0, limit) : list;
+  return `<div class="card cp"><div class="row-h"><h3 class="cardtitle">Almost complete clothing</h3>
+      <div class="seg small-seg" role="radiogroup" aria-label="Show">${[['have', 'Pieces I have'], ['left', 'Pieces still needed']].map(([v, l]) => `<button role="radio" aria-checked="${mode === v}" class="${mode === v ? 'on' : ''}" data-act="cp-mode" data-v="${v}">${l}</button>`).join('')}</div></div>
+    <div class="inv-grid sm">${shown.map((c) => tile({
+      k: m.keyForName(c.piece), name: c.clothing, caption: c.clothing,
+      count: mode === 'have' ? `${c.have}` : `${c.left}`, suffix: mode === 'have' ? `/${c.need}` : ' left',
+      badge: `${Math.round(c.pct * 100)}%`, badgeCls: c.pct >= 0.75 ? 'green' : 'orange', sub: m.sub.get(c.clothing) || '',
+    })).join('')}</div>
+    ${limit && list.length > limit ? `<button class="btn small" style="margin-top:10px" data-act="cp-all">See all ${list.length}</button>` : ''}</div>`;
 }
 function fillItems() {
-  const u = S.ui.items;
-  let { rows, counts, toks, subCounts } = itemRows();
-  const subs = subOptions(u.tab, subCounts);
-  if (u.sub !== 'All' && !subs.includes(u.sub)) { u.sub = 'All'; ({ rows, counts, toks, subCounts } = itemRows()); }
+  const u = S.ui.items, m = S.model;
+  const subs = subOptions(u.tab);
+  if (u.sub !== 'All' && !subs.includes(u.sub)) u.sub = 'All';
+  const { rows, counts, toks, subCounts, rarCounts } = itemRows();
   $$('[data-act="items-tab"]').forEach((b) => { $('.n', b).textContent = counts[b.dataset.v] || 0; });
-  const subEl = $('#items-sub');
-  subEl.innerHTML = subs.length ? ['All', ...subs].map((v) => `<button class="chip ${u.sub === v ? 'on' : ''}" data-act="items-sub" data-v="${esc(v)}">${v === 'All' ? (u.tab === 'All' ? 'Everything' : `All ${esc((TAB_LABEL[u.tab] || u.tab).toLowerCase())}`) : esc(v)}${v !== 'All' ? `<span class="n">${subCounts[v] || 0}</span>` : ''}</button>`).join('') : '';
-  subEl.classList.toggle('hidden', !subs.length);
-  const needsData = ['Fragments', 'Clothing'].includes(u.tab) && !S.model.catalog[u.tab]?.length;
-  $('#items-note').textContent = needsData ? '' : rows.length
-    ? `${plural(rows.length, 'item')}${u.owned ? ' you have' : ''}${u.rarity !== 'All' ? ` \u00b7 ${u.rarity}` : ''}${u.sort === 'rarity' ? (u.dir > 0 ? ' \u00b7 common first' : ' \u00b7 rarest first') : ''}. Tap one to add, set, make or recycle.`
+  const hasKinds = u.tab === 'Clothing' || Object.keys(subCounts).length;
+  const rarOpts = [['All', 'All rarities'], ...RARITY_ORDER.filter((r) => rarCounts[r]).map((r) => [r, `${r} (${rarCounts[r]})`]),
+    ...(rarCounts.Unknown ? [['Unknown', `Not read yet (${rarCounts.Unknown})`]] : [])];
+  if (u.rarity !== 'All' && !rarOpts.some(([v]) => v === u.rarity)) rarOpts.push([u.rarity, `${u.rarity} (0)`]);
+  $('#items-filters').innerHTML = [
+    subs.length && hasKinds ? selectChip('items-sub', 'Group', [['All', u.tab === 'All' ? 'Everything' : `All ${(TAB_LABEL[u.tab] || u.tab).toLowerCase()}`], ...subs.map((v) => [v, `${v} (${subCounts[v] || 0})`])], u.sub) : '',
+    selectChip('items-rarity', 'Rarity', rarOpts, u.rarity),
+    selectChip('items-sort', 'Sort', ITEM_SORTS, u.sort, 'az'),
+    `<button class="chip ${u.owned ? 'on' : ''}" data-act="items-owned">Only mine</button>`,
+  ].join('');
+  $('#items-extra').innerHTML = u.tab === 'Clothing' && !toks.length ? clothingProgressHTML(6) : '';
+  const needsData = ['Fragments', 'Clothing'].includes(u.tab) && !m.catalog[u.tab]?.length;
+  const unread = (u.rarity !== 'All' || u.sort.startsWith('rarity') || u.sub !== 'All') && rarCounts.Unknown;
+  $('#items-note').innerHTML = needsData ? '' : rows.length
+    ? `${plural(rows.length, 'item')}${u.owned ? ' you have' : ''}. Tap one to add, set, make or recycle.${unread ? ` <span class="warn-inline">Some items haven\u2019t been read from the codex yet \u2013 <button class="linkish" data-act="refresh-items">Refresh item data</button></span>` : ''}`
     : (toks.length ? 'No matches \u2013 try fewer letters or another tab.' : 'Nothing here yet.');
   $('#items-grid').innerHTML = needsData
-    ? `<div class="card empty-card"><b>${u.tab} haven\u2019t been loaded yet</b><p class="small muted">Go to More \u2192 Refresh item data. It reads the codex once to get every ${u.tab === 'Clothing' ? 'clothing item and how many pieces each needs' : 'clothing piece'}, plus crafting and recycling recipes.</p>
+    ? `<div class="card empty-card"><b>${u.tab} haven\u2019t been loaded yet</b><p class="small muted">Go to More \u2192 Refresh item data. It reads the codex once to get every item\u2019s rarity, type, recipes, clothing and pieces.</p>
         <button class="btn primary" data-act="refresh-items">Refresh item data now</button></div>`
     : rows.map(itemTile).join('');
 }
@@ -434,16 +466,17 @@ function viewList() {
   if (methods.includes('Cook')) methods.splice(methods.indexOf('Cook') + 1, 0, 'Can cook');
   if (!['All', ...methods].includes(S.ui.method)) S.ui.method = 'All';
   const canCook = m.items.filter((i) => m.cookable(i) > 0).length;
+  const sorts = listSorts(cat);
+  if (!sorts.some(([v]) => v === S.ui.listSort)) S.ui.listSort = 'need';
   return `<div class="sticky-tools"><label class="search"><span aria-hidden="true">\u2315</span><input id="list-search" type="search" placeholder="Type to find an item" value="${esc(S.ui.search)}" aria-label="Search items" autocomplete="off" enterkeyhint="search">
         <button class="x" data-act="list-clear" aria-label="Clear search">\u2715</button></label>
-      <div class="tabs-scroll">${['All', ...methods].map((x) => `<button class="chip ${S.ui.method === x ? 'on' : ''}" data-act="method" data-v="${x}">${x}${x === 'Can cook' ? `<span class="n">${canCook}</span>` : ''}</button>`).join('')}
-        ${cat !== 'Shopping List' ? `<button class="chip ${S.ui.missingOnly ? 'on' : ''}" data-act="missing">Missing only</button>` : ''}</div>
-      <div class="tabs-scroll"><span class="small muted sort-l0">Sort</span>${listSorts(cat).map(([v, l]) => `<button class="chip ${S.ui.listSort === v ? 'on' : ''}" data-act="list-sort" data-v="${v}">${l}</button>`).join('')}</div></div>
+      <div class="filters">${selectChip('list-method', 'Show', [['All', 'Everything'], ...methods.map((x) => [x, x === 'Can cook' ? `Can cook (${canCook})` : x])], S.ui.method)}
+        ${selectChip('list-sort', 'Sort', sorts, S.ui.listSort, 'need')}
+        ${cat !== 'Shopping List' ? `<button class="chip ${S.ui.missingOnly ? 'on' : ''}" data-act="missing">Missing only</button>` : ''}</div></div>
     <p class="note" id="list-note"></p><div class="inv-grid" id="list-grid"></div>`;
 }
 function listSorts(cat) {
-  const out = [['need', 'Most needed'], ['az', 'A\u2013Z'], ['have', 'Most in bag']];
-  if (cat !== 'Cooking Ingredients' && cat !== 'Global Village') out.push(['rarity', 'Rarity']);
+  const out = [['need', 'Most needed'], ['az', 'A\u2013Z'], ['have', 'Most in bag'], ['rarity', 'Rarity: common first'], ['rarity-down', 'Rarity: rarest first']];
   if (cat === 'Global Village' || cat === 'All Items' || cat === 'Shopping List' || S.ui.method === 'Can cook') out.push(['station', 'Cooking station']);
   return out;
 }
@@ -458,6 +491,7 @@ function fillList() {
   const by = {
     need: (a, b) => m.missing(b) - m.missing(a) || nm(a, b), az: nm, have: (a, b) => m.haveOf(b) - m.haveOf(a) || nm(a, b),
     rarity: (a, b) => m.rarityRank(a.name) - m.rarityRank(b.name) || nm(a, b),
+    'rarity-down': (a, b) => { const x = m.rarityRank(a.name), y = m.rarityRank(b.name), n = RARITY_ORDER.length; return (y >= n ? -1 : y) - (x >= n ? -1 : x) || nm(a, b); },
     station: (a, b) => (m.station(a) || 9) - (m.station(b) || 9) || nm(a, b),
   };
   rows.sort(by[S.ui.method === 'Can cook' && S.ui.listSort === 'need' ? 'station' : S.ui.listSort]);
@@ -492,7 +526,7 @@ function viewBins() {
     return `<div class="effort">${tileIcon(PAGE_ICONS[group], 36, group)}<h2>${esc(effort)}</h2><span class="muted small">${withReq.filter((b) => m.binDone(day, b)).length}/${withReq.length} done</span></div>
       <div class="bins-row">${labels.map((b) => binCard(day, b)).join('')}</div>`;
   }).join('');
-  return `<div class="tabs-scroll" style="margin-bottom:10px">${chips}</div>
+  return `<div class="chips wrap" style="margin-bottom:10px">${chips}</div>
     <div class="row-h" style="margin-bottom:4px"><h2 class="section" style="margin:0">${prettyDate(day)}</h2>
       ${ready.length && !expired ? `<button class="btn primary small" data-act="mark-day" data-d="${day}">\u2713 Mark all ready bins done</button>` : ''}</div>
     <p class="note">${esc(note)}</p>${sections}`;
@@ -564,7 +598,7 @@ function viewSchedule() {
   const m = S.model, dates = m.dates(), today = todayISO();
   if (!['All', ...dates].includes(S.ui.schedDay)) S.ui.schedDay = 'All';
   const show = S.ui.schedDay === 'All' ? dates : [S.ui.schedDay];
-  return `<div class="tabs-scroll" style="margin-bottom:8px">${['All', ...dates].map((d) => `<button class="chip ${S.ui.schedDay === d ? 'on' : ''}" data-act="sched-day" data-d="${d}">${d === 'All' ? 'All days' : shortDate(d) + (d === today ? ' (today)' : '')}</button>`).join('')}</div>
+  return `<div class="chips wrap" style="margin-bottom:8px">${['All', ...dates].map((d) => `<button class="chip ${S.ui.schedDay === d ? 'on' : ''}" data-act="sched-day" data-d="${d}">${d === 'All' ? 'All days' : shortDate(d) + (d === today ? ' (today)' : '')}</button>`).join('')}</div>
     <p class="note">Your bag is shared out day by day, earliest bins first \u2013 an item only counts as Ready for one bin.</p>
     ${show.map((d) => {
       const rows = m.schedule.filter((r) => r.date === d);
@@ -578,15 +612,25 @@ function viewRecipes() {
   const by = {
     az: (a, b) => a.localeCompare(b), station: (a, b) => (m.station(it(a)) || 9) - (m.station(it(b)) || 9) || a.localeCompare(b),
     tocook: (a, b) => m.missing(it(b)) - m.missing(it(a)) || a.localeCompare(b), cancook: (a, b) => m.cookable(it(b)) - m.cookable(it(a)) || a.localeCompare(b),
+    rarity: (a, b) => m.rarityRank(a) - m.rarityRank(b) || a.localeCompare(b),
   };
   const dishes = [...m.recipeMap.keys()].filter((d) => it(d) && !(S.ui.hideDone && m.missing(it(d)) === 0)).sort(by[S.ui.recSort] || by.az);
-  return `<div class="sticky-tools"><div class="tabs-scroll"><button class="chip ${S.ui.hideDone ? 'on' : ''}" data-act="hide-done">Hide finished dishes</button>
-      <span class="small muted sort-l">Sort</span>${[['az', 'A\u2013Z'], ['station', 'Cooking station'], ['tocook', 'Most to cook'], ['cancook', 'Can cook now']].map(([v, l]) => `<button class="chip ${S.ui.recSort === v ? 'on' : ''}" data-act="rec-sort" data-v="${v}">${l}</button>`).join('')}</div></div>
+  return `<div class="sticky-tools"><div class="filters">${selectChip('rec-sort', 'Sort', [['az', 'A\u2013Z'], ['station', 'Cooking station'], ['tocook', 'Most to cook'], ['cancook', 'Can cook now'], ['rarity', 'Rarity']], S.ui.recSort, 'az')}
+      <button class="chip ${S.ui.hideDone ? 'on' : ''}" data-act="hide-done">Hide finished dishes</button></div></div>
     <p class="note">Tap a dish to see its ingredients and cook it. <button class="linkish small" data-act="go" data-v="Cooking Ingredients">Cooking ingredients \u2192</button></p>
     <div class="inv-grid">${dishes.map((d) => {
       const it = m.item('Global Village', d), ms = m.missing(it), can = m.cookable(it);
       return tile({ k: key('Global Village', d), count: fmt(m.haveOf(it)), badge: ms ? `${ms} to cook` : '\u2713', badgeCls: ms ? 'orange' : 'green', dim: !ms, sub: `${m.station(it) ? `Lv ${m.station(it)}` : ''}${can ? ` \u00b7 can cook ${can}` : ''}` });
     }).join('') || '<div class="empty">No dishes requested right now.</div>'}</div>`;
+}
+
+// ───────── Clothing progress ─────────
+function viewClothingProgress() {
+  const m = S.model;
+  if (!m.piecesFor.size) return `<div class="card empty-card"><b>Clothing hasn\u2019t been loaded yet</b><p class="small muted">Run More \u2192 Refresh item data to read every clothing item and how many pieces it needs.</p><button class="btn primary" data-act="refresh-items">Refresh item data now</button></div>`;
+  const html = clothingProgressHTML(0);
+  return html ? `<p class="note">Clothing you don\u2019t own yet, closest to done first. Tap one to add pieces \u2013 it completes automatically when you have them all.</p>${html}`
+    : '<div class="card empty-card"><b>No clothing in progress</b><p class="small muted">Add pieces on the Items page (Fragments tab) and they\u2019ll show up here.</p></div>';
 }
 
 // ───────── More ─────────
@@ -633,7 +677,8 @@ const ACT = {
   },
   // Items page
   'items-tab': (d) => { S.ui.items.tab = d.v; S.ui.items.sub = 'All'; persist(); $$('[data-act="items-tab"]').forEach((b) => b.classList.toggle('on', b.dataset.v === d.v)); fillItems(); },
-  'items-sub': (d) => { S.ui.items.sub = d.v; persist(); fillItems(); },
+  'cp-mode': (d) => { S.ui.cpMode = d.v; persist(); S.view === 'Items' ? fillItems() : refresh(); },
+  'cp-all': () => { S.ui.items.tab = 'Clothing'; S.ui.items.search = ''; S.ui.cpAll = true; go(S.view === 'Clothing progress' ? 'Clothing progress' : 'Clothing progress'); },
   'items-owned': (d, el) => { S.ui.items.owned = !S.ui.items.owned; persist(); el.classList.toggle('on', S.ui.items.owned); fillItems(); },
   'items-sort': (d, el) => {
     const u = S.ui.items;
@@ -774,14 +819,22 @@ async function refreshItemData(all = false) {
   try {
     const cat = await db.itemCatalog();
     const known = S.model.itemsData?.details || {};
-    const todo = (cat.todo || []).filter((slug) => all || !known[slug]);
-    let done = 0, failed = 0;
+    const todo = (cat.todo || []).filter((slug) => all || !known[slug] || known[slug].v !== cat.version);
+    let done = 0;
+    const failedList = [];
     for (let i = 0; i < todo.length && !stop; i += 15) {
       const batch = todo.slice(i, i + 15);
       $('#rf-msg', m.el).textContent = `Reading item pages\u2026 ${done} of ${todo.length}`;
       const r = await db.itemDetails(batch);
-      done += batch.length; failed += (r.failed || []).length;
+      done += batch.length; failedList.push(...(r.failed || []));
       $('#rf-bar', m.el).style.width = `${Math.max(3, Math.round((100 * done) / todo.length))}%`;
+    }
+    let failed = failedList.length;
+    if (failed && !stop) {   // try the pages that failed once more
+      $('#rf-msg', m.el).textContent = `Trying ${failed} pages again\u2026`;
+      const again = [];
+      for (let i = 0; i < failedList.length; i += 10) again.push(...((await db.itemDetails(failedList.slice(i, i + 10))).failed || []));
+      failed = again.length;
     }
     await reloadAll();
     m.close(); S.refreshing = false; render();
@@ -1097,7 +1150,13 @@ root.addEventListener('submit', (e) => { if (e.target.id === 'signin-form') { e.
 const onListSearch = debounce(() => fillList(), 120);
 const onItemsSearch = debounce(() => fillItems(), 120);
 root.addEventListener('change', (e) => {
-  if (e.target.id === 'items-rarity') { S.ui.items.rarity = e.target.value; persist(); e.target.closest('.chip').classList.toggle('on', e.target.value !== 'All'); fillItems(); }
+  const id = e.target.id, v = e.target.value;
+  if (id === 'items-rarity') { S.ui.items.rarity = v; persist(); fillItems(); }
+  if (id === 'items-sub') { S.ui.items.sub = v; persist(); fillItems(); }
+  if (id === 'items-sort') { S.ui.items.sort = v; persist(); fillItems(); }
+  if (id === 'list-method') { S.ui.method = v; persist(); renderView(); }
+  if (id === 'list-sort') { S.ui.listSort = v; persist(); fillList(); e.target.closest('.chip').classList.toggle('on', v !== 'need'); }
+  if (id === 'rec-sort') { S.ui.recSort = v; persist(); renderView(); }
 });
 root.addEventListener('input', (e) => {
   if (e.target.id === 'list-search') { S.ui.search = e.target.value; onListSearch(); }
