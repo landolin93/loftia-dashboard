@@ -7,6 +7,7 @@ and the result is saved to data/requests-live.json for the website's "Update req
 Run by .github/workflows/update-bins.yml.
 """
 import datetime
+import html as htmllib
 import json
 import os
 import re
@@ -19,6 +20,7 @@ from playwright.sync_api import sync_playwright
 SITE = os.environ.get('CODEX_SITE', 'https://loftiacodex.com').rstrip('/')
 OUT = os.environ.get('OUT_FILE', 'data/requests-live.json')
 HERE = os.path.dirname(os.path.abspath(__file__))
+WAIT_MS = int(os.environ.get('WAIT_MS', '30000'))   # how long to wait for a day list (tests use less)
 UA = 'LoftiaDashboard/1.0 (personal bin tracker; https://github.com)'
 BINS = [
     ('floating-village-bin-lv1', 'Floating Village', 'Floating Village Lv.1'), ('floating-village-bin-lv2', 'Floating Village', 'Floating Village Lv.2'),
@@ -26,15 +28,22 @@ BINS = [
     ('global-village-bin-lv2', 'Global Village', 'Global Village Lv.2'), ('global-village-bin-lv3', 'Global Village', 'Global Village Lv.3'),
     ('museum-bin-lv1', 'Museum', 'Museum Lv.1'), ('museum-bin-lv2', 'Museum', 'Museum Lv.2'), ('museum-bin-lv3', 'Museum', 'Museum Lv.3'),
 ]
-LIST_READY = """() => {
-  const h = [...document.querySelectorAll('h1,h2,h3,h4')].find((x) => x.textContent.trim().toLowerCase().startsWith('next seven days'));
-  if (!h) return false;
-  for (let el = h.nextElementSibling; el; el = el.nextElementSibling) {
-    const list = /^(OL|UL)$/.test(el.tagName) ? el : el.querySelector('ol, ul');
-    if (list) return list.querySelectorAll('li a[href*="/items/"]').length > 0;
-    if (/^H[1-4]$/.test(el.tagName)) return false;
-  }
-  return false;
+
+
+# Printed in the log when a bin's day list can't be read, so the reader can be adjusted to the real page.
+SNAPSHOT = r"""() => {
+  const heads = [...document.querySelectorAll('h1,h2,h3,h4')];
+  const head = heads.find((x) => /next seven days/i.test(x.textContent));
+  let box = head ? head.parentElement : null;
+  for (let k = 0; k < 4 && box && box.querySelectorAll('img').length < 4; k++) box = box.parentElement;
+  const t = document.body ? document.body.innerText : '';
+  const i = t.toLowerCase().indexOf('next seven days');
+  return {
+    title: document.title,
+    headings: heads.slice(0, 10).map((x) => x.tagName + ':' + x.textContent.trim().slice(0, 30)).join(' / '),
+    text: (i >= 0 ? t.slice(i, i + 300) : t.slice(0, 300)).replace(/\s+/g, ' '),
+    code: box ? box.outerHTML.replace(/\s+/g, ' ').slice(0, 2500) : '(no "Next seven days" heading found)',
+  };
 }"""
 
 _cache = {}
@@ -64,6 +73,74 @@ def serve(route):
     except Exception:   # noqa: BLE001 - a script that won't download just gets skipped
         return route.abort()
     route.fulfill(status=status, headers={'Content-Type': ctype, 'Access-Control-Allow-Origin': '*'}, body=body)
+
+
+def saved_pool(html):
+    """The "Every request" sets as written in the plain page: [[(qty, name), ...], ...]."""
+    m = re.search(r'Every request\s*</h[1-4]>(.*?)(?:<h[1-4][\s>]|</main>|$)', html, re.S | re.I)
+    if not m:
+        return []
+    out = []
+    for li in re.findall(r'<li[^>]*>(.*?)</li>', m.group(1), re.S | re.I):
+        req = []
+        for a in re.findall(r'<a[^>]*href="[^"]*/items/[^"]*"[^>]*>(.*?)</a>', li, re.S | re.I):
+            t = re.sub(r'<[^>]+>', ' ', a)
+            t = re.sub(r'\s+', ' ', t.replace('&#39;', "'").replace('&amp;', '&').replace('&#x27;', "'")).strip()
+            q = re.match(r'^(\d+)\s*(.+)$', t)
+            if q:
+                req.append((int(q.group(1)), q.group(2)))
+        if req:
+            out.append(req)
+    return out
+
+
+def saved_pool(page_html):
+    """The "Every request" list from the plain (saved) page, which always shows amounts: [[(qty, name)], ...]"""
+    i = page_html.lower().find('every request')
+    if i < 0:
+        return []
+    section = re.split(r'<h[1-4][\s>]', page_html[i:], maxsplit=2)
+    section = section[1] if len(section) > 1 else page_html[i:]
+    out = []
+    for li in re.findall(r'<li[^>]*>(.*?)</li>', section, re.S):
+        req = []
+        for a in re.findall(r'<a[^>]*>(.*?)</a>', li, re.S):
+            t = ' '.join(htmllib.unescape(re.sub(r'<[^>]+>', ' ', a)).split())
+            m = re.match(r'^(\d+)\s+(.+)$', t)
+            if m:
+                req.append((int(m.group(1)), m.group(2)))
+        if req:
+            out.append(req)
+    return out
+
+
+def saved_names(page_html):
+    """slug -> exact item name, from the saved page's item links (e.g. ivells-sea-anemone -> Ivell's Sea Anemone)"""
+    names = {}
+    for href, inner in re.findall(r'<a[^>]+href="[^"]*/items/([a-z0-9-]+)/?"[^>]*>(.*?)</a>', page_html, re.S):
+        t = ' '.join(htmllib.unescape(re.sub(r'<[^>]+>', ' ', inner)).split())
+        t = re.sub(r'^\d+\s+', '', re.sub(r'\s+\d+$', '', t)).strip()
+        if t and not t.isdigit():
+            names.setdefault(href, t)
+    for href, title in re.findall(r'<a[^>]+href="[^"]*/items/([a-z0-9-]+)/?"[^>]*title="\d+\s+([^"]+)"', page_html):
+        names[href] = htmllib.unescape(title)
+    return names
+
+
+def fill_amounts(items, pool):
+    """Live cards may only show pictures: take the amounts from the matching request in "Every request"."""
+    if all(it.get('qty') for it in items):
+        return items
+    names = {it['name'].lower() for it in items}
+    match = next((req for req in pool if {n.lower() for _, n in req} == names), None)
+    if match is None:   # fall back to any request that has the item
+        amounts = {}
+        for req in pool:
+            for q, n in req:
+                amounts.setdefault(n.lower(), q)
+    else:
+        amounts = {n.lower(): q for q, n in match}
+    return [dict(it, qty=it.get('qty') or amounts.get(it['name'].lower()) or 1) for it in items]
 
 
 def resolve(label, today):
@@ -96,6 +173,7 @@ def main():
     reader = open(os.path.join(HERE, 'bin-page-reader.js'), encoding='utf-8').read()
     today = datetime.date.today()
     schedule, pools, failed = [], {}, []
+    snapshot_shown = False
     with sync_playwright() as p:
         browser = p.chromium.launch()
         page = browser.new_page()
@@ -103,23 +181,59 @@ def main():
         for slug, group, bin_ in BINS:
             url = f'{SITE}/bins/{slug}/'
             try:
-                status = download(url)[0]
+                status, _, body = download(url)
                 if status >= 400:
                     raise RuntimeError(f'the page download was refused (HTTP {status})')
+                page_html = body.decode('utf-8', 'replace')
+                pool_saved = saved_pool(page_html)
+                exact = saved_names(page_html)
                 page.goto(url, wait_until='domcontentloaded', timeout=60000)
-                page.wait_for_function(LIST_READY, timeout=30000)
+                try:
+                    page.wait_for_function('() => { const r = ' + reader.strip().rstrip(';') + '; return r.days.length > 0 && r.days.every((d) => d.items.length > 0); }', timeout=WAIT_MS)
+                except Exception:
+                    if not snapshot_shown:   # show what the real page looks like, once
+                        snap = page.evaluate(SNAPSHOT)
+                        print(f'---- what {bin_} looked like (send this to Claude if bins fail) ----')
+                        for k in ('title', 'headings', 'text', 'code'):
+                            print(f'{k}: {snap[k]}')
+                        print('----')
+                        snapshot_shown = True
+                    probe = page.evaluate(reader)
+                    if not probe.get('days') or not all(d.get('items') for d in probe['days']):
+                        raise RuntimeError('the day list never appeared (see the page snapshot above)')
                 page.wait_for_timeout(2500)   # let the codex's script finish updating the days
                 res = page.evaluate(reader)
+                # quantities the cards don't show: take them from this bin's "Every request" sets
+                sets = [[(it['qty'], it['name']) for it in r] for r in (res.get('pool') or [])] or saved_pool(download(url)[2].decode('utf-8', 'replace'))
+                lookup = {tuple(sorted(n for _, n in r)): dict((n, q) for q, n in r) for r in sets}
+                for d in res.get('days') or []:
+                    if any(it.get('guessed') for it in d['items']):
+                        found = lookup.get(tuple(sorted(it['name'] for it in d['items'])))
+                        for it in d['items']:
+                            if it.get('guessed') and found and it['name'] in found:
+                                it['qty'], it['guessed'] = found[it['name']], False
+                if not res.get('pool') and sets:
+                    res['pool'] = [[{'qty': q, 'name': n} for q, n in r] for r in sets]
+                pool_live = [[(it['qty'], it['name']) for it in req if it.get('qty')] for req in (res.get('pool') or [])]
+                pool_live = [r for r in pool_live if r]
+                pool = pool_live if len(pool_live) >= len(pool_saved) else pool_saved
+                for d in res.get('days') or []:   # use the codex's exact item names where the card only gave a picture
+                    for it in d['items']:
+                        if it.get('slug') and it['slug'] in exact:
+                            it['name'] = exact[it['slug']]
                 days = dated(res.get('days') or [], today)
                 if not days:
                     raise RuntimeError('no days listed')
                 for date, items in days:
-                    for it in items:
+                    for it in fill_amounts(items, pool):
                         schedule.append({'date': date, 'group': group, 'bin': bin_, 'name': it['name'], 'quantity': it['qty']})
-                if res.get('pool'):
-                    pools[bin_] = [[[it['qty'], it['name']] for it in req] for req in res['pool']]
+                if pool:
+                    pools[bin_] = [[[q, n] for q, n in req] for req in pool]
                 labels = ', '.join(d['label'] for d in res['days'])
-                print(f'OK   {bin_}: {days[0][0]} to {days[-1][0]} (labels: {labels}), {len(res.get("pool") or [])} requests in rotation')
+                guessed = sum(1 for d in res['days'] for it in d['items'] if it.get('guessed'))
+                if guessed:
+                    print(f'NOTE {bin_}: {guessed} quantities not shown on the page and not in its rotation list - counted as 1')
+                print(f'OK   {bin_}: {days[0][0]} to {days[-1][0]} (labels: {labels}), {len(pool)} requests in rotation')
             except Exception as e:   # noqa: BLE001
                 failed.append(bin_)
                 print(f'FAIL {bin_}: {e}')
