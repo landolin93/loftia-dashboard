@@ -12,6 +12,7 @@ import os
 import re
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from playwright.sync_api import sync_playwright
 
@@ -21,6 +22,7 @@ from read_bins import SITE, download, serve   # same plain-download + local brow
 OUT = os.environ.get('OUT_FILE', 'data/spots-live.json')
 HERE = os.path.dirname(os.path.abspath(__file__))
 WAIT_MS = int(os.environ.get('WAIT_MS', '20000'))
+DISCOVERY_BUDGET = int(os.environ.get('DISCOVERY_SECONDS', '1200'))   # stop looking for new spots after 20 minutes
 CATEGORIES = {'materials', 'crops', 'flowers', 'artifacts', 'item fragments'}
 
 
@@ -67,18 +69,43 @@ def main():
         print(f'Could not read the item list (HTTP {status}).'); sys.exit(1)
     items = item_slugs(body.decode('utf-8', 'replace'))
     print(f'{len(items)} gathered items to check for spots')
-    spots, skipped = {}, []
-    for i, slug in enumerate(items):
+    # Spots each item drops at, remembered from earlier runs - only items not seen before are downloaded.
+    try:
+        prev = json.load(open(OUT, encoding='utf-8'))
+    except Exception:   # noqa: BLE001 - first run
+        prev = {}
+    item_spots = {k: v for k, v in (prev.get('item_spots') or {}).items() if k in items}
+    todo = [s_ for s_ in items if s_ not in item_spots]
+    print(f'{len(items) - len(todo)} items remembered from last time, {len(todo)} to check', flush=True)
+    skipped, started = [], time.time()
+
+    def check(slug):
         st, _, page = download(f'{SITE}/items/{slug}/')
-        if st < 400:
-            for s in re.findall(r'/spots/([a-z0-9-]+)', page.decode('utf-8', 'replace')):
-                spots.setdefault(s, set()).add(slug)
-        else:
-            skipped.append(slug)
-        if (i + 1) % 50 == 0:
-            print(f'  checked {i + 1} of {len(items)} items, {len(spots)} spots so far')
-        time.sleep(0.3)   # be gentle with the fan site
-    print(f'{len(spots)} gathering spots found' + (f' ({len(skipped)} item pages could not be read: {", ".join(skipped[:10])})' if skipped else ''))
+        time.sleep(0.25)   # be gentle with the fan site
+        if st >= 400:
+            return slug, None
+        return slug, sorted(set(re.findall(r'/spots/([a-z0-9-]+)', page.decode('utf-8', 'replace'))))
+
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        futures = [pool.submit(check, s_) for s_ in todo]
+        for i, f in enumerate(as_completed(futures)):
+            slug, found = f.result()
+            if found is None:
+                skipped.append(slug)
+            else:
+                item_spots[slug] = found
+            if (i + 1) % 25 == 0:
+                print(f'  checked {i + 1} of {len(todo)} items ({int(time.time() - started)}s)', flush=True)
+            if time.time() - started > DISCOVERY_BUDGET:
+                print(f'  time limit reached after {i + 1} items - carrying on with the spots found so far', flush=True)
+                for g in futures:
+                    g.cancel()
+                break
+    spots = {}
+    for slug, found in item_spots.items():
+        for s_ in found:
+            spots.setdefault(s_, set()).add(slug)
+    print(f'{len(spots)} gathering spots found' + (f' ({len(skipped)} item pages could not be read: {", ".join(skipped[:10])})' if skipped else ''), flush=True)
     if not spots:
         print('No spots found - the item pages could not be read. The last saved map is kept.'); sys.exit(1)
     reader = open(os.path.join(HERE, 'spot-page-reader.js'), encoding='utf-8').read()
@@ -108,7 +135,7 @@ def main():
                         shown = True
                     raise RuntimeError('"Where to find it" stayed empty')
                 out[slug] = {'name': page.title().split(' -- ')[0].strip(), 'where': rows}
-                print(f'OK   {slug}: ' + ', '.join(f"{r['label']}{' ' + str(r['count']) if r['count'] is not None else ''}" for r in rows[:6]))
+                print(f'OK   [{len(out)}/{len(spots)}] {slug}: ' + ', '.join(f"{r['label']}{' ' + str(r['count']) if r['count'] is not None else ''}" for r in rows[:6]))
             except Exception as e:   # noqa: BLE001
                 failed.append(slug)
                 print(f'FAIL {slug}: {e}')
@@ -124,7 +151,8 @@ def main():
             out[s] = old[s]
     os.makedirs(os.path.dirname(OUT) or '.', exist_ok=True)
     with open(OUT, 'w', encoding='utf-8') as f:
-        json.dump({'generated_at': datetime.datetime.now(datetime.timezone.utc).isoformat(timespec='seconds'), 'spots': out, 'failed': failed}, f, indent=1)
+        json.dump({'generated_at': datetime.datetime.now(datetime.timezone.utc).isoformat(timespec='seconds'), 'spots': out, 'failed': failed,
+                   'item_spots': item_spots}, f, indent=1)
         f.write('\n')
     print(f'Saved {len(out)} spots ({len(failed)} could not be read).')
 
