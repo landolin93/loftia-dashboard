@@ -14,6 +14,9 @@ concurrency:
   group: update-map
   cancel-in-progress: false
 
+env:
+  PYTHONUNBUFFERED: '1'   # show progress lines in the log as they happen
+
 jobs:
   read-map:
     runs-on: ubuntu-24.04
