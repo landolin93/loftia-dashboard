@@ -600,42 +600,113 @@ function binCard(day, bin) {
 // ───────── Tasks ─────────
 function dueText(day) { const n = daysBetween(todayISO(), day); return n <= 0 ? 'Due today' : n === 1 ? 'Due tomorrow' : `Due ${shortDate(day)}`; }
 function dueTag(day) { const n = daysBetween(todayISO(), day); return `<span class="tag ${n <= 0 ? 'berry' : n === 1 ? 'orange' : 'blue'}">${dueText(day)}</span>`; }
-const taskTitle = (t) => (t.district ? `Go to ${t.district}` : t.location ? `Go to ${t.location}` : 'Location not listed');
-const taskSub = (t) => (t.location && t.district ? `find these at ${t.location}` : t.district ? 'the exact spot isn\u2019t listed on the codex' : 'press Update requests to look these up');
+S.ui.findList = S.ui.findList || [];
+const areaWord = (a) => (/area$/i.test(a) ? a : `${a} area`);
+function taskTitle(t) {
+  if (!t.known) return 'Location not listed';
+  if (t.district) return `Go to ${t.district}`;
+  if (t.area) return `Go to an ${areaWord(t.area)}`;
+  return t.location ? `Go to ${t.location}` : 'Go gathering';
+}
+function taskSub(t) {
+  if (!t.known) return 'the codex doesn\u2019t say where these are \u2013 run More \u2192 Refresh item data, or open each item\u2019s codex page';
+  const parts = [];
+  if (t.district && t.area) parts.push(`${areaWord(t.area)}`);
+  if (t.location) parts.push(`find these at ${t.location}`);
+  if (t.spots && t.spots.length) {
+    const tools = [...new Set(t.spots.map((sp) => sp.tool).filter(Boolean))];
+    parts.push(`hit ${t.spots.map((sp) => sp.name).join(', ')}${tools.length ? ` (${tools.join(', ')})` : ''}`);
+  }
+  return parts.join(' \u00b7 ') || 'the exact spot isn\u2019t listed on the codex';
+}
 function taskTile(e) {
-  return tile({ k: e.key, count: `\u00d7${e.short}`, badge: e.bonus ? `later \u00b7 ${shortDate(e.due).split(' ').slice(1).join(' ')}` : (e.rarity || ''), badgeCls: e.bonus ? 'blue' : (RARITY_TAG[e.rarity] || 'muted'), extra: 'data-ctx="task"', sub: e.bonus ? 'while you\u2019re here' : '' });
+  const amount = e.max > 1 && e.min ? ` \u00b7 ${e.min === e.max ? e.max : `${e.min}\u2013${e.max}`} per spot` : '';
+  return tile({ k: e.key, count: `\u00d7${e.short}`, badge: e.due ? dueText(e.due).replace('Due ', '') : (e.rarity || ''),
+    badgeCls: e.due ? (daysBetween(todayISO(), e.due) <= 0 ? 'orange' : 'blue') : (RARITY_TAG[e.rarity] || 'muted'), extra: 'data-ctx="task"', sub: amount.replace(' \u00b7 ', '') });
+}
+function bonusTile(b) {
+  return tile({ k: b.key, name: b.name, group: b.group, count: b.max > 1 ? `${b.min}\u2013${b.max}` : '', badge: b.reason,
+    badgeCls: b.reason === 'Bins' ? 'orange' : b.reason === 'Clothing' ? 'lav' : b.reason === 'Shopping list' ? 'green' : 'blue', extra: 'data-ctx="task"' });
+}
+function taskCard(t, n, mode) {
+  return `<div class="card task"><div class="th"><div class="num ${t.known ? '' : 'unknown'}">${n}</div><div class="titles">
+      <h3 class="cardtitle">${esc(taskTitle(t))}</h3><div class="small muted">${esc(taskSub(t).replace(/^./, (c) => c.toUpperCase()))}.</div></div>
+      ${t.deadline && mode === 'week' ? dueTag(t.deadline) : ''}</div>
+    <div class="inv-grid sm">${t.items.map(taskTile).join('')}</div>
+    ${t.bonusFinds && t.bonusFinds.length ? `<div class="bonus"><div class="tiny muted" style="font-weight:800;margin:10px 0 6px">Also found here</div><div class="inv-grid xs">${t.bonusFinds.map(bonusTile).join('')}</div></div>` : ''}</div>`;
 }
 function viewTasks() {
-  const m = S.model, f = S.ui.taskFilter;
+  const m = S.model, f = S.ui.taskFilter, mode = S.ui.taskMode;
   const groups = f === 'All' ? TASK_GROUPS : [f];
-  const mode = S.ui.taskMode;
-  const tasks = m.buildTasks(groups, mode);
+  const tasks = mode === 'find' ? m.buildTasks(groups, 'find', S.ui.findList) : m.buildTasks(groups, mode);
   const nItems = tasks.reduce((t, x) => t + x.items.length, 0);
-  const hasPools = Object.keys(m.pools).length > 0;
-  const missing = m.missingInfo().filter((i) => groups.includes(i.group));
-  let last = null, n = 0;
-  const body = tasks.map((t) => {
-    n++;
-    const head = mode === 'all' ? (n === 1 ? '<h2 class="section">Stock up for every request</h2>' : '') : t.deadline !== last ? `<h2 class="section">${prettyDate(t.deadline)} \u2013 ${dueText(t.deadline)}</h2>` : '';
-    last = t.deadline;
-    const main = t.items.filter((e) => !e.bonus).length, bonus = t.items.length - main;
-    return `${head}<div class="card task"><div class="th"><div class="num ${t.known ? '' : 'unknown'}">${n}</div><div class="titles">
-        <h3 class="cardtitle">${esc(taskTitle(t))}</h3><div class="small muted">${esc(taskSub(t).replace(/^./, (c) => c.toUpperCase()))}. ${mode === 'all' ? plural(t.items.length, 'item') : `${main} due${bonus ? `, plus ${bonus} extra while you\u2019re here` : ''}`}.</div></div>${mode === 'all' ? '' : dueTag(t.deadline)}</div>
-      <div class="inv-grid sm">${t.items.map(taskTile).join('')}</div></div>`;
-  }).join('');
+  const hasPools = Object.keys(m.pools).length > 0, hasSpots = Object.keys(m.spots || {}).length > 0;
+  const seg = `<div class="seg small-seg" role="radiogroup" aria-label="Plan for">${[['week', 'Next 7 days'], ['all', 'Every request'], ['find', 'Find items']].map(([v, l]) => `<button role="radio" aria-checked="${mode === v}" class="${mode === v ? 'on' : ''}" data-act="task-mode" data-v="${v}">${l}</button>`).join('')}</div>`;
+  const filter = mode === 'find' ? '' : `<div class="chips">${['All', ...TASK_GROUPS].map((x) => `<button class="chip ${f === x ? 'on' : ''}" data-act="task-filter" data-v="${x}">${x}</button>`).join('')}</div>`;
+  const note = mode === 'week' ? 'This week\u2019s bins come first, most urgent at the top. Each stop groups everything you can get in one place, plus useful extras found there.'
+    : mode === 'all' ? (hasPools ? 'Everything it takes to fill every request in each bin\u2019s rotation once, grouped by where to find it.' : 'Press Update requests to load each bin\u2019s full list of requests.')
+    : 'Pick what you\u2019re looking for. The route puts the places that give you the most of them first (anything the bins need counts extra), and shows what else is worth grabbing there.';
+  const picker = mode === 'find' ? `<div class="card"><div class="row-h"><h3 class="cardtitle">Looking for (${S.ui.findList.length})</h3>
+      <button class="btn small primary" data-act="find-add">\uff0b Add items</button><button class="btn small" data-act="find-needs">Add from my needs</button>
+      ${S.ui.findList.length ? '<button class="btn small" data-act="find-clear">Clear</button>' : ''}</div>
+      ${S.ui.findList.length ? `<div class="chips">${(S.findAll ? S.ui.findList : S.ui.findList.slice(0, 8)).map((k) => `<span class="pick-chip">${icon(nameOfKey(k), 22, groupOfKey(k))}<span>${esc(nameOfKey(k))}</span><button class="x" data-act="find-remove" data-key="${esc(k)}" aria-label="Remove">\u2715</button></span>`).join('')}
+        ${S.ui.findList.length > 8 ? `<button class="linkish small" data-act="find-toggle">${S.findAll ? 'Show fewer' : `Show all ${S.ui.findList.length}`}</button>` : ''}</div>`
+        : '<div class="small muted">Nothing picked yet. Add items, or tap \u201cAdd from my needs\u201d for what your bins and almost-complete clothing need.</div>'}</div>` : '';
+  const body = tasks.map((t, i) => taskCard(t, i + 1, mode)).join('');
+  const empty = mode === 'find' ? (S.ui.findList.length ? '' : '')
+    : `<div class="card"><h3 class="cardtitle" style="color:var(--green)">Nothing left to collect \u2713</h3><div class="small muted">${mode === 'all' ? (hasPools ? 'You already have enough to fill every request in the rotation.' : 'No rotation lists loaded yet.') : 'Every open bin already has its fish and artifacts covered by what\u2019s in your bag.'}</div></div>`;
   const finds = S.finds.slice(0, 12);
-  return `<div class="row-h" style="margin-bottom:10px"><div class="seg small-seg" role="radiogroup" aria-label="Plan for">${[['week', 'Next 7 days'], ['all', 'Every request']].map(([v, l]) => `<button role="radio" aria-checked="${mode === v}" class="${mode === v ? 'on' : ''}" data-act="task-mode" data-v="${v}">${l}</button>`).join('')}</div>
-      <div class="chips">${['All', ...TASK_GROUPS].map((x) => `<button class="chip ${f === x ? 'on' : ''}" data-act="task-filter" data-v="${x}">${x}</button>`).join('')}</div>
-      <span class="small muted">${plural(tasks.length, 'stop')}, ${plural(nItems, 'item')} to find</span></div>
-    <p class="note">${mode === 'all' ? (hasPools ? 'Everything it takes to fill every request in each bin\u2019s rotation once, so you\u2019re ready whatever comes up. ' : 'Press Update requests to load each bin\u2019s full list of requests. ') : 'What the next 7 days of bins still need. '}Tap an item to log what you found.</p>
-    ${missing.length ? `<div class="banner"><span class="small">Rarity and location haven\u2019t been looked up yet for ${plural(missing.length, 'item')}.</span>
-      ${S.updating ? '' : '<button class="btn primary small" data-act="update">Look up now</button>'}</div>` : ''}
-    ${tasks.length ? body : `<div class="card"><h3 class="cardtitle" style="color:var(--green)">Nothing left to collect \u2713</h3><div class="small muted">${mode === 'all' ? (hasPools ? 'You already have enough to fill every request in the rotation.' : 'No rotation lists loaded yet.') : 'Every open bin already has its fish and artifacts covered by what\u2019s in your bag.'}</div></div>`}
+  return `<div class="row-h" style="margin-bottom:10px">${seg}${filter}<span class="small muted">${plural(tasks.length, 'stop')}, ${plural(nItems, 'item')} to find</span></div>
+    <p class="note">${note} Tap an item to log what you found.</p>
+    ${!hasSpots ? `<div class="banner"><span class="small">Gathering spots haven\u2019t been read yet, so pieces and artifacts can\u2019t be grouped by spot.</span>${S.refreshing ? '' : '<button class="btn primary small" data-act="refresh-items">Refresh item data</button>'}</div>` : ''}
+    ${picker}${tasks.length ? body : empty}
     ${finds.length ? `<h2 class="section">Collected today</h2><div class="card">${finds.map((x) => {
       const [g, name] = splitKey(x.item_key);
       return `<div class="req-row"><span class="tiny muted" style="width:62px">${new Date(x.ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}</span>${icon(name, 26, g)}
         <span class="grow"><b>+${x.qty}</b> ${esc(name)}</span><button class="btn small" data-act="undo-find" data-id="${x.id}">Undo</button></div>`;
     }).join('')}</div>` : ''}`;
+}
+/** Pick items to look for: search everything, tap tiles to check them. */
+function openFindPicker() {
+  const m = S.model;
+  const rows = m.database().filter((r) => ['Fishes', 'Artifacts', 'Fragments', 'Materials', 'Crops', 'Clothing', 'Flowers'].includes(r.category));
+  const chosen = new Set(S.ui.findList);
+  let q = '', tab = 'All';
+  const md = modal({ title: 'What are you looking for?', wide: true, dismiss: true,
+    sub: 'Tap items to check them. Items marked \u201cno spots\u201d don\u2019t list where they\u2019re found on the codex yet.',
+    body: `<div class="filters" style="margin-bottom:10px"><label class="search" style="flex:1"><span aria-hidden="true">\u2315</span><input id="fp-q" placeholder="Type to find an item" autocomplete="off" aria-label="Search"></label></div>
+      <div class="chips wrap" id="fp-tabs" style="margin-bottom:10px"></div><div class="inv-grid sm" id="fp-grid"></div>`,
+    foot: '<span class="left" id="fp-n"></span><button class="btn" data-x="cancel">Cancel</button><button class="btn primary" data-x="done">Done</button>' });
+  const tabs = ['All', 'Fishes', 'Artifacts', 'Fragments', 'Materials'];
+  const draw = () => {
+    $('#fp-tabs', md.el).innerHTML = tabs.map((t) => `<button class="chip ${tab === t ? 'on' : ''}" data-tab="${t}">${TAB_LABEL[t] || t}</button>`).join('');
+    const toks = normName(q).split(' ').filter(Boolean);
+    const list = rows.filter((r) => (tab === 'All' || r.category === tab) && toks.every((t) => r.search.includes(t)))
+      .sort((a, b) => (chosen.has(b.key) - chosen.has(a.key)) || nameCmp(a.name, b.name)).slice(0, 160);
+    $('#fp-grid', md.el).innerHTML = list.map((r) => tile({ k: r.key, name: r.name, count: chosen.has(r.key) ? '\u2713' : '', act: 'fp-toggle',
+      badge: m.sourcesFor(r.name).length ? '' : 'no spots', badgeCls: 'muted', dim: !chosen.has(r.key) })).join('') || '<div class="muted small">No matches</div>';
+    $('#fp-n', md.el).textContent = `${chosen.size} picked`;
+  };
+  draw();
+  md.el.addEventListener('click', (e) => {
+    const t = e.target.closest('[data-tab]'); if (t) { tab = t.dataset.tab; draw(); return; }
+    const c = e.target.closest('[data-act="fp-toggle"]'); if (c) { const k = c.dataset.key; chosen.has(k) ? chosen.delete(k) : chosen.add(k); draw(); return; }
+    const x = e.target.closest('[data-x]'); if (!x) return;
+    if (x.dataset.x === 'done') { S.ui.findList = [...chosen]; persist(); }
+    md.close(); if (x.dataset.x === 'done') refresh();
+  });
+  md.el.addEventListener('input', (e) => { if (e.target.id === 'fp-q') { q = e.target.value; draw(); } });
+  setTimeout(() => $('#fp-q', md.el)?.focus(), 50);
+}
+/** Fill the find list from what you need: bins first, then clothing you're close to, then the shopping list. */
+function findFromNeeds() {
+  const m = S.model, keys = new Set(S.ui.findList);
+  for (const t of m.binTargets(TASK_GROUPS, 'week')) keys.add(t.key);
+  for (const c of m.clothingProgress().slice(0, 10)) keys.add(m.keyForName(c.piece));
+  for (const i of m.items) if (m.missing(i) > 0 && m.sourcesFor(i.name).length) keys.add(key(i.group, i.name));
+  const added = keys.size - S.ui.findList.length;
+  S.ui.findList = [...keys]; persist(); refresh();
+  toast(added ? `Added ${plural(added, 'item')} you need` : 'Everything you need is already on the list');
 }
 
 // ───────── Daily schedule & recipes ─────────
@@ -814,6 +885,11 @@ const ACT = {
   'mark-day': (d) => markDay(d.d),
   'task-filter': (d) => { S.ui.taskFilter = d.v; persist(); renderView(); },
   'task-mode': (d) => { S.ui.taskMode = d.v; persist(); renderView(); },
+  'find-add': () => openFindPicker(),
+  'find-toggle': () => { S.findAll = !S.findAll; refresh(); },
+  'find-needs': () => findFromNeeds(),
+  'find-clear': () => { S.ui.findList = []; persist(); refresh(); },
+  'find-remove': (d) => { S.ui.findList = S.ui.findList.filter((k) => k !== d.key); persist(); refresh(); },
   'copy-bookmark': () => copyBookmark(),
   'set-order': (d) => { S.ui.order = d.v; persist(); S._db = null; refresh(); toast(d.v === 'game' ? 'Items now follow the game\u2019s order' : 'Items now sorted A\u2013Z'); },
   'undo-find': (d) => undoFind(Number(d.id)),
@@ -952,11 +1028,24 @@ async function refreshItemData(all = false) {
       for (let i = 0; i < failedList.length; i += 10) again.push(...((await db.itemDetails(failedList.slice(i, i + 10))).failed || []));
       failed = again.length;
     }
+    // gathering spots named on item pages: what each drops, by area
+    if (!stop) {
+      await reloadAll();
+      const knownSpots = S.model.itemsData?.spots || {};
+      const spotSlugs = [...new Set(Object.values(S.model.itemsData?.details || {}).flatMap((d) => (d.gather || []).map((g) => g.slug)))]
+        .filter((slug) => all || !knownSpots[slug]);
+      for (let i = 0; i < spotSlugs.length && !stop; i += 15) {
+        $('#rf-msg', m.el).textContent = `Reading gathering spots\u2026 ${i} of ${spotSlugs.length}`;
+        $('#rf-bar', m.el).style.width = `${Math.max(3, Math.round((100 * i) / spotSlugs.length))}%`;
+        await db.itemSpots(spotSlugs.slice(i, i + 15));
+      }
+    }
     await reloadAll();
     m.close(); S.refreshing = false; render();
     const recipes = Object.values(S.model.itemsData.details || {}).filter((x) => x.craft).length;
     const rated = Object.values(S.model.itemsData.details || {}).filter((x) => x.rarity).length;
-    toast(todo.length ? `Item data updated \u2013 ${fmt(cat.catalog)} items, ${fmt(rated)} with rarity, ${recipes} crafting recipes, ${S.model.piecesFor.size} clothing items made from pieces${failed ? ` (${failed} pages couldn\u2019t be read)` : ''}`
+    const nSpots = Object.keys(S.model.itemsData.spots || {}).length;
+    toast(todo.length || nSpots ? `Item data updated \u2013 ${fmt(nSpots)} gathering spots \u2013 ${fmt(cat.catalog)} items, ${fmt(rated)} with rarity, ${recipes} crafting recipes, ${S.model.piecesFor.size} clothing items made from pieces${failed ? ` (${failed} pages couldn\u2019t be read)` : ''}`
       : `Item list checked \u2013 no new items to read (${fmt(cat.catalog)} items)`);
   } catch (e) {
     m.close(); S.refreshing = false;

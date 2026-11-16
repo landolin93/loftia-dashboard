@@ -146,6 +146,10 @@ export class Model {
     this.allNames = [...this.index.values()].map((v) => v[0]).sort((a, b) => a.localeCompare(b));
     const details = this.itemsData.details || {};
     this.detailsBySlug = details;
+    this.spots = this.itemsData.spots || {};
+    // full district names ("gridfall" -> "The Gridfall") from item pages
+    this.districtNames = new Map();
+    for (const d of Object.values(details)) if (d && d.district) this.districtNames.set(d.district.toLowerCase().replace(/^the\s+/, '').replace(/[^a-z0-9]+/g, '-'), d.district);
     this.pieceOf = new Map();       // piece name -> {clothing, qty}
     this.piecesFor = new Map();     // clothing name -> {piece, qty}
     for (const [c, names] of Object.entries(cat)) {
@@ -376,16 +380,109 @@ export class Model {
     }));
   }
 
-  // ── task list ──
-  buildTasks(groups = TASK_GROUPS, mode = 'week') {
-    const per = new Map();
-    if (mode === 'all') {   // stock up for every request in the rotation
-      for (const [k, need] of this.poolNeed(groups)) {
-        const [g, n] = splitKey(k), short = need - this.get(k);
-        if (short > 0) per.set(k, { key: k, group: g, name: n, short, due: '', bins: [], need });
+  // ── where things come from: gathering spots (by area) or a district / fishing location ──
+  districtName(hint) {
+    if (!hint) return '';
+    const k = String(hint).toLowerCase().replace(/^the\s+/, '').replace(/[^a-z0-9]+/g, '-');
+    return this.districtNames.get(k) || String(hint).replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  }
+  sourcesFor(name) {
+    const det = this.details(name), slug = slugOf(name), out = [];
+    for (const g of det.gather || []) {
+      const sp = this.spots[g.slug];
+      const areas = sp && sp.drops ? [...new Set(sp.drops.filter((d) => d.slug === slug).map((d) => d.area))] : [];
+      for (const area of areas.length ? areas : [null]) {
+        out.push({ kind: 'spot', spot: g.slug, spotName: g.name || (sp && sp.name) || g.slug, area,
+          district: this.districtName(g.district || det.district || ''),
+          min: g.min || 1, max: g.max || g.min || 1, tool: (sp && sp.tool) || '' });
       }
     }
-    if (mode !== 'all') for (const [id, slot] of this.alloc) {
+    if (!out.length) {
+      const info = this.itemInfo(name), loc = det.location || info.location || '', dis = this.districtName(det.district || info.district || '');
+      if (loc || dis) out.push({ kind: 'place', location: loc, district: dis });
+    }
+    return out;
+  }
+  /** How useful an item is as a "bonus find": bins first, then clothing you're close to, then the shopping list, then rarity. */
+  bonusValue(k, name, basic) {
+    const item = this.byKey.get(k);
+    if (item && item.group !== 'Cooking Ingredients' && this.missing(item) > 0) return { w: 100, reason: 'Bins' };
+    const p = this.pieceOf.get(name);
+    if (p) { const have = this.get(k); if (have > 0 && !this.get(this.keyForName(p.clothing))) return { w: 20 + 20 * (have / p.qty), reason: 'Clothing' }; }
+    if (item && this.missing(item) > 0) return { w: 10, reason: 'Shopping list' };
+    if (basic) return null;   // everyday drops you get anyway
+    const r = this.rarityRank(name);
+    if (r >= 2 && r < RARITIES.length) return { w: r, reason: this.rarity(name) };
+    return null;
+  }
+  /** Plan a route: targets [{key, name, group, short, weight, due}] -> steps, each one place to go with the
+   *  targets it covers (biggest total weight first), the spots to hit, and other useful things found there. */
+  planRoute(targets) {
+    const places = new Map(), reachable = new Set();
+    for (const t of targets) {
+      for (const src of this.sourcesFor(t.name)) {
+        reachable.add(t.key);
+        const pk = src.kind === 'spot'
+          ? (src.district || src.area ? `${src.district}|${src.area || ''}` : `spot:${src.spot}`)
+          : `${src.district}|loc:${src.location}`;
+        if (!places.has(pk)) places.set(pk, { key: pk, district: src.district || '', area: src.area || '', location: src.kind === 'place' ? src.location : '', spots: new Map(), items: new Map() });
+        const P = places.get(pk);
+        if (src.kind === 'spot') {
+          if (!P.spots.has(src.spot)) P.spots.set(src.spot, { slug: src.spot, name: src.spotName, tool: src.tool, keys: new Set() });
+          P.spots.get(src.spot).keys.add(t.key);
+        }
+        const it = P.items.get(t.key) || { t, min: 0, max: 0 };
+        it.min = Math.max(it.min, src.min || 0); it.max = Math.max(it.max, src.max || 0);
+        P.items.set(t.key, it);
+      }
+    }
+    const remaining = new Set(reachable), steps = [];
+    while (remaining.size) {
+      let best = null;
+      // Go where the soonest-due bin item is first (bins come first), then where the most weight is.
+      for (const P of places.values()) {
+        let w = 0, n = 0, due = '9999';
+        for (const [k, it] of P.items) if (remaining.has(k)) { w += it.t.weight; n++; if (it.t.due && it.t.due < due) due = it.t.due; }
+        if (!n) continue;
+        if (!best || due < best.due || (due === best.due && (w > best.w || (w === best.w && n > best.n)))) best = { P, w, n, due };
+      }
+      if (!best) break;
+      const P = best.P;
+      const items = [...P.items.values()].filter((it) => remaining.has(it.t.key)).sort((a, b) => b.t.weight - a.t.weight);
+      for (const it of items) remaining.delete(it.t.key);
+      const spots = [...P.spots.values()].map((sp) => ({ ...sp, n: items.filter((it) => sp.keys.has(it.t.key)).length }))
+        .filter((sp) => sp.n).sort((a, b) => b.n - a.n || a.name.localeCompare(b.name));
+      steps.push({ district: P.district, area: P.area, location: P.location, spots, items, weight: best.w });
+    }
+    const taken = new Set(targets.map((t) => t.key));
+    for (const st of steps) {   // bonus finds at the same spots (in the same area)
+      const bonus = new Map();
+      for (const sp of st.spots) {
+        for (const d of (this.spots[sp.slug] || {}).drops || []) {
+          if (d.area && d.area !== st.area) continue;
+          const k = this.keyForName(d.name);
+          if (taken.has(k)) continue;
+          const v = this.bonusValue(k, d.name, !d.area && /basic/i.test(d.group || ''));
+          if (!v) continue;
+          const old = bonus.get(k);
+          if (!old || v.w > old.w) bonus.set(k, { key: k, name: d.name, group: splitKey(k)[0], min: d.min, max: d.max, w: v.w, reason: v.reason });
+        }
+      }
+      st.bonus = [...bonus.values()].sort((a, b) => b.w - a.w || a.name.localeCompare(b.name)).slice(0, 8);
+    }
+    return { steps, unplaced: targets.filter((t) => !reachable.has(t.key)) };
+  }
+  /** Bin needs as planner targets - the sooner a bin is due, the more it weighs. */
+  binTargets(groups = TASK_GROUPS, mode = 'week') {
+    const per = new Map();
+    if (mode === 'all') {
+      for (const [k, need] of this.poolNeed(groups)) {
+        const [g, n] = splitKey(k), short = need - this.get(k);
+        if (short > 0) per.set(k, { key: k, group: g, name: n, short, due: '', bins: [], weight: 10 + short });
+      }
+      return [...per.values()];
+    }
+    for (const [id, slot] of this.alloc) {
       const [d, b] = id.split('|');
       for (const [k, [c, q]] of slot) {
         const [g, n] = splitKey(k);
@@ -397,31 +494,33 @@ export class Model {
         e.bins.push([d, b, q - c]);
       }
     }
-    const stops = new Map();
-    for (const e of per.values()) {
-      const info = this.itemInfo(e.name);
-      e.rarity = info.rarity || '';
-      e.rank = this.rarityRank(e.name);
-      e.item = this.byKey.get(e.key);
-      const sk = `${info.district || ''}||${info.location || ''}`;
-      if (!stops.has(sk)) stops.set(sk, { district: info.district || '', location: info.location || '', items: [] });
-      stops.get(sk).items.push(e);
+    for (const e of per.values()) e.weight = 1000 / (1 + Math.max(0, daysBetween(this.today, e.due))) + e.short;
+    return [...per.values()];
+  }
+  /** What you've picked to look for (plus anything the bins need from it) as planner targets. */
+  findTargets(keys) {
+    return keys.map((k) => {
+      const [g, n] = splitKey(k), item = this.byKey.get(k), p = this.pieceOf.get(n);
+      const short = p ? Math.max(1, p.qty - this.get(k)) : item && this.missing(item) > 0 ? this.missing(item) : 1;
+      const binW = item && item.group !== 'Cooking Ingredients' && this.missing(item) > 0 ? 500 : 0;
+      return { key: k, group: g, name: n, short, due: '', bins: [], weight: 50 + binW + short };
+    });
+  }
+  /** Task list: one task per place to visit. */
+  buildTasks(groups = TASK_GROUPS, mode = 'week', keys = null) {
+    const targets = mode === 'find' ? this.findTargets(keys || []) : this.binTargets(groups, mode);
+    const { steps, unplaced } = this.planRoute(targets);
+    const decorate = (t) => ({ ...t, rarity: this.rarity(t.name), rank: this.rarityRank(t.name), item: this.byKey.get(t.key), bonus: false });
+    const tasks = steps.map((st) => {
+      const items = st.items.map((it) => ({ ...decorate(it.t), min: it.min, max: it.max }));
+      const dues = items.map((e) => e.due).filter(Boolean).sort();
+      return { district: st.district, area: st.area, location: st.location, spots: st.spots, bonusFinds: st.bonus || [],
+        items, deadline: dues[0] || '', known: true, main: items.length, total: items.length, rank: Math.max(...items.map((e) => e.rank)) };
+    });
+    if (unplaced.length) {
+      const items = unplaced.map(decorate);
+      tasks.push({ district: '', area: '', location: '', spots: [], bonusFinds: [], items, deadline: items.map((e) => e.due).filter(Boolean).sort()[0] || '', known: false, main: items.length, total: items.length, rank: 0 });
     }
-    const tasks = [];
-    for (const t of stops.values()) {
-      t.deadline = mode === 'all' ? '' : t.items.reduce((m, e) => (e.due < m ? e.due : m), t.items[0].due);
-      for (const e of t.items) e.bonus = e.due > t.deadline;
-      t.items.sort((a, b) => (a.bonus - b.bonus) || a.due.localeCompare(b.due) || (a.rank - b.rank) || a.name.localeCompare(b.name));
-      const main = t.items.filter((e) => !e.bonus);
-      t.known = !!(t.location || t.district);
-      t.rank = Math.max(...main.map((e) => e.rank));
-      t.main = main.length;
-      t.total = t.items.length;
-      tasks.push(t);
-    }
-    tasks.sort((a, b) => a.deadline.localeCompare(b.deadline) || (a.known === b.known ? 0 : a.known ? -1 : 1)
-      || (a.rank - b.rank) || (b.main - a.main) || (b.total - a.total)
-      || a.district.localeCompare(b.district) || a.location.localeCompare(b.location));
     return tasks;
   }
 

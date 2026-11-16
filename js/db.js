@@ -83,3 +83,4 @@ export async function runUpdate(today, knownDishes, live = null) {
 /** "Refresh item data": step 1 reads the item list, step 2 reads item pages in batches */
 export async function itemCatalog() { return callFn({ action: 'catalog' }); }
 export async function itemDetails(slugs) { return callFn({ action: 'details', slugs }); }
+export async function itemSpots(slugs) { return callFn({ action: 'spots', slugs }); }
