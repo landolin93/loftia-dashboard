@@ -410,7 +410,11 @@ export class Model {
   /** Where a spot is, from the live map: [{district, area, count}] (area rows set the context for district rows). */
   whereOf(slug) {
     const live = this.spotsLive[slug];
-    if (!live || !live.where) return [];
+    if (!live) return [];
+    const hasWhere = (live.where || []).some((r) => !this.areaNames.has(String(r.label || '').toLowerCase().replace(/\s+area$/, '')));
+    // no readable map text: use the district(s) the spot's picture points to (lc- / hg- / sd-)
+    if (!hasWhere && live.guess && live.guess.length) return live.guess.map((d) => ({ district: this.districtName(d), area: '', count: null, guessed: true }));
+    if (!live.where) return [];
     const out = [];
     let area = '';
     for (const r of live.where) {
@@ -433,7 +437,7 @@ export class Model {
         // live map: one source per district that has this spot (in the right area, if the drop needs one)
         const hint = g.district ? this.districtName(g.district) : '';
         const spots = where.filter((w) => w.district && (!area || !w.area || w.area.toLowerCase() === String(area).toLowerCase()) && (!hint || w.district === hint));
-        if (spots.length) { for (const w of spots) out.push({ ...base, district: w.district, count: w.count }); continue; }
+        if (spots.length) { for (const w of spots) out.push({ ...base, district: w.district, count: w.count, guessed: !!w.guessed }); continue; }
         // No live map for this spot: use the item's own District / Found In, or what other items say about the spot.
         const own = this.districtName(g.district || det.district || '');
         if (own) { out.push({ ...base, district: own, location: !area ? (det.location || '') : '', count: null }); continue; }
