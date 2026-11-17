@@ -192,6 +192,8 @@ export class Model {
     return out.sort((a, b) => b.pct - a.pct || a.left - b.left || a.clothing.localeCompare(b.clothing));
   }
   orderOf(name) { return this.order.has(name) ? this.order.get(name) : 1e9; }
+  /** A clothing piece whose clothing you already own. */
+  pieceComplete(name) { const p = this.pieceOf.get(name); return !!p && this.get(this.keyForName(p.clothing)) > 0; }
   categoryOf(name) { return (this.index.get(normName(name)) || CATALOG_INDEX.get(normName(name)) || ['', 'Other'])[1]; }
   details(name) { return this.detailsBySlug[slugOf(name)] || {}; }
 
@@ -568,7 +570,8 @@ export class Model {
       const [g, n] = splitKey(k), item = this.byKey.get(k), p = this.pieceOf.get(n);
       const short = p ? Math.max(1, p.qty - this.get(k)) : item && this.missing(item) > 0 ? this.missing(item) : 1;
       const binW = item && item.group !== 'Cooking Ingredients' && this.missing(item) > 0 ? 500 : 0;
-      return { key: k, group: g, name: n, short, due: '', bins: [], weight: (50 + binW + short) * this.rarityBoost(n) };
+      const done = this.pieceComplete(n) ? 0.2 : 1;   // pieces for clothing you already own matter much less
+      return { key: k, group: g, name: n, short, due: '', bins: [], weight: (50 + binW + short) * this.rarityBoost(n) * done };
     });
   }
   /** Task list: one task per place to visit. */

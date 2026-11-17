@@ -81,10 +81,10 @@ function rarityOf(name) { return S.model.rarity(name); }
 function rarityTag(r) { return r ? `<span class="tag ${RARITY_TAG[r] || ''}">${esc(r)}</span>` : ''; }
 
 /** One in-game style tile. Tapping it opens the item pop-up. */
-function tile({ k, name = nameOfKey(k), group = groupOfKey(k), count, suffix = '', caption = name, sub = '', badge = '', badgeCls = '', dim = false, act = 'open', extra = '' }) {
+function tile({ k, name = nameOfKey(k), group = groupOfKey(k), count, suffix = '', caption = name, sub = '', badge = '', badgeCls = '', dim = false, act = 'open', extra = '', picked = false, gold = false }) {
   const st = RARITY_STARS[rarityOf(name)];
   return `<button class="inv-cell ${dim ? 'zero' : ''}" data-act="${act}" data-key="${esc(k)}" ${extra} title="${esc(name)}">
-    <span class="inv">${st ? `<span class="rar" style="color:${st[1]}">${st[0]}</span>` : ''}${badge ? `<span class="tb ${badgeCls}">${esc(badge)}</span>` : ''}
+    <span class="inv ${picked ? 'picked' : ''} ${gold ? 'gold' : ''}">${st ? `<span class="rar" style="color:${st[1]}">${st[0]}</span>` : ''}${badge ? `<span class="tb ${badgeCls}">${esc(badge)}</span>` : ''}
       ${icon(name, 80, group, '')}<span class="count">${esc(count)}${suffix ? `<small>${esc(suffix)}</small>` : ''}</span></span>
     <span class="cap">${esc(caption)}</span>${sub ? `<span class="cap2">${esc(sub)}</span>` : ''}</button>`;
 }
@@ -354,6 +354,7 @@ function itemRows() {
     'rarity-down': (a, b) => { const x = m.rarityRank(a.name), y = m.rarityRank(b.name), n = RARITY_ORDER.length; return (y >= n ? -1 : y) - (x >= n ? -1 : x) || nm(a, b); },
   };
   rows.sort(by[u.sort] || by.az);
+  if (u.tab === 'Fragments') rows.sort((a, b) => m.pieceComplete(a.name) - m.pieceComplete(b.name));   // stable: keeps the chosen order within each
   return { rows, counts, toks, subCounts, rarCounts };
 }
 /** Groups inside a tab: clothing parts, raw / refined materials, cooked food. */
@@ -367,7 +368,10 @@ function subOptions(tab, subCounts = {}) {
 function itemTile(r) {
   const m = S.model, n = m.get(r.key);
   const p = m.pieceOf.get(r.name);
-  if (p) return tile({ k: r.key, name: r.name, count: fmt(n), suffix: `/${p.qty}`, dim: !n, caption: r.name.replace(/\s*\(piece\)$/i, ''), sub: 'pieces' });
+  if (p) {
+    const done = m.pieceComplete(r.name);
+    return tile({ k: r.key, name: r.name, count: fmt(n), suffix: `/${p.qty}`, dim: !n && !done, caption: r.name.replace(/\s*\(piece\)$/i, ''), sub: done ? 'complete \u2713' : 'pieces', gold: done });
+  }
   if (r.category === 'Clothing') {
     const pc = m.piecesFor.get(r.name);
     const pieces = pc ? m.get(m.keyForName(pc.piece)) : 0;
@@ -420,13 +424,20 @@ function fillItems() {
 }
 
 // ───────── the item pop-up ─────────
-function openSheet(k, ctx = null) {
-  S.sheet = { key: k, ctx, mode: ctx === 'task' ? 'add' : (S.sheet?.mode || 'add'), makeN: 1, recN: 1 };
+function openSheet(k, ctx = null, list = null) {
+  // the list of items on screen, so you can move to the next / previous one without closing
+  if (!list) list = [...new Set($$('#view .inv-cell[data-key]').map((e) => e.dataset.key))];
+  if (!list.includes(k)) list = [k];
+  S.sheet = { key: k, ctx, mode: ctx === 'task' ? 'add' : (S.sheet?.mode || 'add'), makeN: 1, recN: 1, list };
   if (!$('.sheet-ov')) {
     const ov = document.createElement('div');
     ov.className = 'sheet-ov';
-    ov.innerHTML = '<div class="sheet" role="dialog" aria-modal="true"><div class="grab" aria-hidden="true"></div><button class="x-close" data-act="sheet-close" aria-label="Close">\u2715</button><div class="sheet-body"></div></div>';
+    ov.innerHTML = `<div class="sheet" role="dialog" aria-modal="true"><div class="grab" aria-hidden="true"></div>
+      <div class="sheet-nav"><button class="nav-arrow" data-act="sheet-prev" aria-label="Previous item">\u2039</button><span class="tiny muted" id="sheet-pos"></span>
+        <button class="nav-arrow" data-act="sheet-next" aria-label="Next item">\u203a</button></div>
+      <button class="x-close" data-act="sheet-close" aria-label="Close">\u2715</button><div class="sheet-body"></div></div>`;
     ov.addEventListener('mousedown', (e) => { if (e.target === ov) closeSheet(); });
+    addSwipe(ov.querySelector('.sheet'));
     document.body.appendChild(ov);
     document.body.classList.add('noscroll');
     requestAnimationFrame(() => ov.classList.add('open'));
@@ -435,10 +446,50 @@ function openSheet(k, ctx = null) {
   if (matchMedia('(pointer: fine)').matches) setTimeout(() => $('#sh-qty')?.focus({ preventScroll: true }), 60);   // no surprise keyboard on phones
 }
 function closeSheet() { S.sheet = null; $('.sheet-ov')?.remove(); document.body.classList.remove('noscroll'); }
+/** Move to the next / previous item in the list the pop-up was opened from. */
+function sheetStep(dir) {
+  const sh = S.sheet;
+  if (!sh) return false;
+  const i = sh.list.indexOf(sh.key) + dir;
+  if (i < 0 || i >= sh.list.length) { toast(dir > 0 ? 'That was the last item' : 'That was the first item', '\u2022'); return false; }
+  const el = $('.sheet');
+  if (el) { el.classList.remove('slide-l', 'slide-r'); void el.offsetWidth; el.classList.add(dir > 0 ? 'slide-l' : 'slide-r'); }
+  const mode = sh.mode;
+  openSheet(sh.list[i], sh.ctx, sh.list);
+  S.sheet.mode = mode; renderSheet();
+  if (matchMedia('(pointer: fine)').matches) $('#sh-qty')?.focus({ preventScroll: true });
+  return true;
+}
+/** Swipe the pop-up: left / right = next / previous item, down = close. */
+function addSwipe(el) {
+  let x0 = 0, y0 = 0, dx = 0, dy = 0, active = false, axis = '';
+  el.addEventListener('touchstart', (e) => {
+    if (e.touches.length !== 1) return;
+    x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; dx = dy = 0; axis = ''; active = true;
+  }, { passive: true });
+  el.addEventListener('touchmove', (e) => {
+    if (!active) return;
+    dx = e.touches[0].clientX - x0; dy = e.touches[0].clientY - y0;
+    if (!axis && Math.hypot(dx, dy) > 12) axis = Math.abs(dx) > Math.abs(dy) * 1.3 ? 'x' : 'y';
+    if (axis === 'x') el.style.transform = `translateX(${dx * 0.6}px)`;
+    else if (axis === 'y' && dy > 0 && el.scrollTop <= 0) el.style.transform = `translateY(${dy}px)`;
+  }, { passive: true });
+  el.addEventListener('touchend', () => {
+    if (!active) return;
+    active = false;
+    el.style.transform = '';
+    if (axis === 'x' && Math.abs(dx) > 70) sheetStep(dx < 0 ? 1 : -1);
+    else if (axis === 'y' && dy > 110 && el.scrollTop <= 0) closeSheet();
+  });
+}
 function renderSheet() {
   const sh = S.sheet, m = S.model, body = $('.sheet-body');
   if (!sh || !body) return;
   const k = sh.key, [g, name] = splitKey(k), have = m.get(k);
+  const pos = sh.list.indexOf(k), pe = $('#sheet-pos');
+  if (pe) pe.textContent = sh.list.length > 1 ? `${pos + 1} of ${sh.list.length}` : '';
+  $$('.sheet .nav-arrow').forEach((b) => { b.style.visibility = sh.list.length > 1 ? 'visible' : 'hidden'; });
+  const hasNext = pos >= 0 && pos < sh.list.length - 1;
   const cat = m.categoryOf(name), item = m.byKey.get(k), info = m.itemInfo(name), det = m.details(name);
   const where = [info.location, info.district].filter(Boolean).join(', ');
   const chips = [`<span class="tag ${CAT_TAG[cat] || ''}">${esc(TAB_LABEL[cat] || cat)}</span>`, m.sub.get(name) && m.sub.get(name) !== cat ? `<span class="tag">${esc(m.sub.get(name))}</span>` : '',
@@ -460,8 +511,9 @@ function renderSheet() {
   const qty = `<div class="sec"><div class="have-big"><b>${fmt(have)}</b><span>${cat === 'Clothing' ? (have ? 'owned' : 'not owned yet') : 'in your bag'}</span></div>
     <div class="seg" role="radiogroup">${[['add', isTask ? 'Found' : 'Add amount'], ['set', 'Set total']].map(([v, l]) => `<button role="radio" aria-checked="${sh.mode === v}" class="${sh.mode === v ? 'on' : ''}" data-act="sheet-mode" data-v="${v}">${l}</button>`).join('')}</div>
     <div class="qty-row"><input id="sh-qty" class="qty-input" type="number" inputmode="numeric" min="0" placeholder="${sh.mode === 'add' ? 'How many?' : String(have)}" aria-label="${sh.mode === 'add' ? 'Amount to add' : 'New total'}">
-      <button class="btn primary" data-act="sheet-save">${sh.mode === 'add' ? (isTask ? 'Log find' : 'Add') : 'Save'}</button></div>
-    <div class="tiny muted" id="sh-msg">${sh.mode === 'add' ? 'Type how many you got and press Enter.' : 'Type the new total and press Enter.'}</div>
+      <button class="btn ${hasNext ? '' : 'primary'}" data-act="sheet-save">${sh.mode === 'add' ? (isTask ? 'Log find' : 'Add') : 'Save'}</button>
+      ${hasNext ? '<button class="btn primary" data-act="sheet-save-next" title="Save and go to the next item">Save &amp; next \u203a</button>' : ''}</div>
+    <div class="tiny muted" id="sh-msg">${sh.mode === 'add' ? 'Type how many you got' : 'Type the new total'}${hasNext ? ', then Save &amp; next to keep going (or swipe sideways).' : ' and press Enter.'}</div>
     <div class="quick">${[[-1, '\u2212 1'], [1, '+ 1'], [5, '+ 5'], [10, '+ 10']].map(([d, l]) => `<button class="btn" data-act="sheet-delta" data-d="${d}">${l}</button>`).join('')}</div></div>`;
   const make = m.recipesFor(name).map((r, idx) => {
     const max = m.maxMake(name, idx), n = Math.max(1, Math.min(sh.makeN, Math.max(1, max)));
@@ -499,11 +551,19 @@ function renderSheet() {
     ${need}${pieces}${qty}${whereSec}${make}${recycle}${rel}
     <div class="sec" style="border:0"><a class="linkish small" href="${itemUrl(name)}" target="_blank" rel="noopener">Open on loftiacodex.com \u2197</a></div>`;
 }
-async function sheetSave() {
+async function sheetSave(next = false) {
   const sh = S.sheet, inp = $('#sh-qty'), msg = $('#sh-msg');
+  if (next && inp.value.trim() === '') { sheetStep(1); return; }   // nothing typed: just move on
   const n = Number(String(inp.value).replace(/,/g, '').trim());
   if (inp.value.trim() === '' || !Number.isInteger(n) || n < 0 || (sh.mode === 'add' && n === 0)) {
     msg.textContent = sh.mode === 'add' ? 'Type a whole number of 1 or more.' : 'Type a whole number (0 or more).'; msg.style.color = 'var(--berry)'; inp.focus(); return;
+  }
+  if (next) {   // save, then straight to the next item
+    const k0 = sh.key, name0 = nameOfKey(k0), have0 = S.model.get(k0);
+    if (sh.mode === 'add' && sh.ctx === 'task') { await logFind(k0, n, true); }
+    else await setCounts([{ item_key: k0, have: sh.mode === 'add' ? have0 + n : n }], sh.mode === 'add' ? `+${fmt(n)} ${name0}` : `${name0}: ${fmt(n)}`);
+    if (S.sheet) sheetStep(1);
+    return;
   }
   const k = sh.key, name = nameOfKey(k), have = S.model.get(k);
   if (sh.mode === 'add' && sh.ctx === 'task') return logFind(k, n);
@@ -693,9 +753,13 @@ function openFindPicker() {
     $('#fp-tabs', md.el).innerHTML = tabs.map((t) => `<button class="chip ${tab === t ? 'on' : ''}" data-tab="${t}">${TAB_LABEL[t] || t}</button>`).join('');
     const toks = normName(q).split(' ').filter(Boolean);
     const list = rows.filter((r) => (tab === 'All' || r.category === tab) && toks.every((t) => r.search.includes(t)))
-      .sort((a, b) => (chosen.has(b.key) - chosen.has(a.key)) || nameCmp(a.name, b.name)).slice(0, 160);
-    $('#fp-grid', md.el).innerHTML = list.map((r) => tile({ k: r.key, name: r.name, count: chosen.has(r.key) ? '\u2713' : '', act: 'fp-toggle',
-      badge: m.sourcesFor(r.name).length ? '' : 'no spots', badgeCls: 'muted', dim: !chosen.has(r.key) })).join('') || '<div class="muted small">No matches</div>';
+      .sort((a, b) => (chosen.has(b.key) - chosen.has(a.key)) || (m.pieceComplete(a.name) - m.pieceComplete(b.name)) || nameCmp(a.name, b.name)).slice(0, 160);
+    $('#fp-grid', md.el).innerHTML = list.map((r) => {
+      const on = chosen.has(r.key), have = m.get(r.key), p = m.pieceOf.get(r.name), done = m.pieceComplete(r.name);
+      return tile({ k: r.key, name: r.name, count: fmt(have), suffix: p ? `/${p.qty}` : '', act: 'fp-toggle', picked: on, gold: done && !on,
+        badge: on ? '\u2713 Picked' : (m.sourcesFor(r.name).length ? (done ? 'complete' : '') : 'no spots'), badgeCls: on ? 'orange' : 'muted',
+        sub: done ? 'clothing complete' : (have ? `you have ${fmt(have)}` : '') });
+    }).join('') || '<div class="muted small">No matches</div>';
     $('#fp-n', md.el).textContent = `${chosen.size} picked`;
   };
   draw();
@@ -854,11 +918,14 @@ const ACT = {
   go: (d) => { S.back = S.view; go(d.v); },
   back: () => go(S.back && S.back !== S.view ? S.back : 'More'),
   'open-bins': (d) => { if (d.d) S.ui.binDay = d.d; go('Bins'); },
-  open: (d, el) => openSheet(d.key, el.dataset.ctx || null),
+  open: (d, el) => openSheet(d.key, el.dataset.ctx || null, el.closest('.sheet') && S.sheet ? (S.sheet.list.includes(d.key) ? S.sheet.list : null) : null),
   'sheet-close': () => closeSheet(),
   'sheet-spots': () => { S.sheet.allSpots = !S.sheet.allSpots; renderSheet(); },
   'sheet-mode': (d) => { S.sheet.mode = d.v; renderSheet(); if (matchMedia('(pointer: fine)').matches) $('#sh-qty')?.focus(); },
   'sheet-save': () => sheetSave(),
+  'sheet-save-next': () => sheetSave(true),
+  'sheet-next': () => sheetStep(1),
+  'sheet-prev': () => sheetStep(-1),
   'sheet-delta': (d) => { const k = S.sheet.key; setCounts([{ item_key: k, have: S.model.get(k) + Number(d.d) }]); },
   'make-n': (d) => { S.sheet.makeN = Math.max(1, S.sheet.makeN + Number(d.d)); renderSheet(); },
   'rec-n': (d) => { S.sheet.recN = Math.max(1, S.sheet.recN + Number(d.d)); renderSheet(); },
@@ -957,7 +1024,7 @@ async function markDay(day) {
   toast(`${plural(plans.length, 'bin')} done`);
   await safely(async () => { for (const [b, p] of plans) await db.completeBin(day, b, p); }, 'Some bins couldn\u2019t be marked done.');
 }
-async function logFind(k, n) {
+async function logFind(k, n, keepOpen = false) {
   const m = S.model, name = nameOfKey(k);
   const proposed = new Map([[k, m.get(k) + n]]);
   const { changes: extra, messages } = m.completeClothing(proposed);
@@ -966,7 +1033,8 @@ async function logFind(k, n) {
   rebuild();
   const entry = { id: null, ts: new Date().toISOString(), item_key: k, qty: n };
   S.finds.unshift(entry);
-  closeSheet(); refresh();
+  if (!keepOpen) closeSheet();
+  refresh();
   toast([`+${n} ${name} added to your bag`, ...messages].join(' \u00b7 '));
   await safely(async () => {
     entry.id = await db.logFind(k, n);
@@ -1381,7 +1449,8 @@ root.addEventListener('input', (e) => {
   if (e.target.id === 'items-search') { S.ui.items.search = e.target.value; onItemsSearch(); }
 });
 document.addEventListener('keydown', (e) => {
-  if (e.target.id === 'sh-qty' && e.key === 'Enter') { e.preventDefault(); sheetSave(); return; }
+  if (e.target.id === 'sh-qty' && e.key === 'Enter') { e.preventDefault(); sheetSave(e.shiftKey || !!$('[data-act="sheet-save-next"]') && e.shiftKey); return; }
+  if (S.sheet && !document.querySelector('.overlay') && !/INPUT|TEXTAREA|SELECT/.test(e.target.tagName || '') && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) { e.preventDefault(); sheetStep(e.key === 'ArrowRight' ? 1 : -1); return; }
   if ((e.target.id === 'items-search' || e.target.id === 'list-search') && e.key === 'Escape') { e.target.value = ''; e.target.dispatchEvent(new Event('input', { bubbles: true })); return; }
   if (document.querySelector('.overlay')) return;
   if (e.key === 'Escape' && S.sheet) { e.preventDefault(); closeSheet(); return; }
