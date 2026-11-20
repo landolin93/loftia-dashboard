@@ -1,21 +1,7 @@
 {
- "generated_at": "2026-11-20T01:49:43+00:00",
+ "generated_at": "2026-11-20T13:07:59+00:00",
  "today": "2026-11-20",
  "schedule": [
-  {
-   "date": "2026-11-19",
-   "group": "Floating Village",
-   "bin": "Floating Village Lv.1",
-   "name": "Bahia Brain Coral",
-   "quantity": 2
-  },
-  {
-   "date": "2026-11-19",
-   "group": "Floating Village",
-   "bin": "Floating Village Lv.1",
-   "name": "Nassau Grouper",
-   "quantity": 3
-  },
   {
    "date": "2026-11-20",
    "group": "Floating Village",
@@ -101,17 +87,17 @@
    "quantity": 5
   },
   {
-   "date": "2026-11-19",
+   "date": "2026-11-26",
    "group": "Floating Village",
-   "bin": "Floating Village Lv.2",
-   "name": "Spring Pygmy Sunfish",
-   "quantity": 3
+   "bin": "Floating Village Lv.1",
+   "name": "Bahia Brain Coral",
+   "quantity": 2
   },
   {
-   "date": "2026-11-19",
+   "date": "2026-11-26",
    "group": "Floating Village",
-   "bin": "Floating Village Lv.2",
-   "name": "Red Handfish",
+   "bin": "Floating Village Lv.1",
+   "name": "Nassau Grouper",
    "quantity": 3
   },
   {
@@ -199,17 +185,17 @@
    "quantity": 3
   },
   {
-   "date": "2026-11-19",
+   "date": "2026-11-26",
    "group": "Floating Village",
-   "bin": "Floating Village Lv.3",
-   "name": "Leafy Sea Dragon",
-   "quantity": 2
+   "bin": "Floating Village Lv.2",
+   "name": "Dalhousie Catfish",
+   "quantity": 3
   },
   {
-   "date": "2026-11-19",
+   "date": "2026-11-26",
    "group": "Floating Village",
-   "bin": "Floating Village Lv.3",
-   "name": "Haditha Cavefish",
+   "bin": "Floating Village Lv.2",
+   "name": "Splendid Toadfish",
    "quantity": 3
   },
   {
@@ -297,18 +283,18 @@
    "quantity": 2
   },
   {
-   "date": "2026-11-19",
-   "group": "Global Village",
-   "bin": "Global Village Lv.1",
-   "name": "Creamy Summer Soup",
-   "quantity": 1
+   "date": "2026-11-26",
+   "group": "Floating Village",
+   "bin": "Floating Village Lv.3",
+   "name": "Texas Blind Salamander",
+   "quantity": 2
   },
   {
-   "date": "2026-11-19",
-   "group": "Global Village",
-   "bin": "Global Village Lv.1",
-   "name": "Fries",
-   "quantity": 1
+   "date": "2026-11-26",
+   "group": "Floating Village",
+   "bin": "Floating Village Lv.3",
+   "name": "Bia Goby",
+   "quantity": 3
   },
   {
    "date": "2026-11-20",
@@ -395,17 +381,17 @@
    "quantity": 1
   },
   {
-   "date": "2026-11-19",
+   "date": "2026-11-26",
    "group": "Global Village",
-   "bin": "Global Village Lv.2",
-   "name": "Onion Soup",
+   "bin": "Global Village Lv.1",
+   "name": "Veggie Egg Scramble",
    "quantity": 1
   },
   {
-   "date": "2026-11-19",
+   "date": "2026-11-26",
    "group": "Global Village",
-   "bin": "Global Village Lv.2",
-   "name": "Mushroom Soup",
+   "bin": "Global Village Lv.1",
+   "name": "Power Smoothie",
    "quantity": 1
   },
   {
@@ -493,17 +479,17 @@
    "quantity": 1
   },
   {
-   "date": "2026-11-19",
+   "date": "2026-11-26",
    "group": "Global Village",
-   "bin": "Global Village Lv.3",
-   "name": "Summer Salad",
+   "bin": "Global Village Lv.2",
+   "name": "Fruit Salad",
    "quantity": 1
   },
   {
-   "date": "2026-11-19",
+   "date": "2026-11-26",
    "group": "Global Village",
-   "bin": "Global Village Lv.3",
-   "name": "Rice Pudding",
+   "bin": "Global Village Lv.2",
+   "name": "Bioluminescent Ivy Soup",
    "quantity": 1
   },
   {
@@ -591,17 +577,17 @@
    "quantity": 1
   },
   {
-   "date": "2026-11-19",
-   "group": "Museum",
-   "bin": "Museum Lv.1",
-   "name": "Used Gone Fishin'",
-   "quantity": 2
+   "date": "2026-11-26",
+   "group": "Global Village",
+   "bin": "Global Village Lv.3",
+   "name": "Ful Medames",
+   "quantity": 1
   },
   {
-   "date": "2026-11-19",
-   "group": "Museum",
-   "bin": "Museum Lv.1",
-   "name": "Spotless Fidget Spinner",
+   "date": "2026-11-26",
+   "group": "Global Village",
+   "bin": "Global Village Lv.3",
+   "name": "Pineapple Skewer",
    "quantity": 1
   },
   {
@@ -689,17 +675,17 @@
    "quantity": 2
   },
   {
-   "date": "2026-11-19",
+   "date": "2026-11-26",
    "group": "Museum",
-   "bin": "Museum Lv.2",
-   "name": "Used Game Cartridge",
-   "quantity": 2
+   "bin": "Museum Lv.1",
+   "name": "Used Lava Lamp",
+   "quantity": 1
   },
   {
-   "date": "2026-11-19",
+   "date": "2026-11-26",
    "group": "Museum",
-   "bin": "Museum Lv.2",
-   "name": "Spotless Ruby Doll",
+   "bin": "Museum Lv.1",
+   "name": "Used Gone Fishin'",
    "quantity": 2
   },
   {
@@ -787,17 +773,17 @@
    "quantity": 2
   },
   {
-   "date": "2026-11-19",
+   "date": "2026-11-26",
    "group": "Museum",
-   "bin": "Museum Lv.3",
-   "name": "Used YouPod",
-   "quantity": 3
+   "bin": "Museum Lv.2",
+   "name": "Used Pet Pal",
+   "quantity": 2
   },
   {
-   "date": "2026-11-19",
+   "date": "2026-11-26",
    "group": "Museum",
-   "bin": "Museum Lv.3",
-   "name": "Spotless Boombox",
+   "bin": "Museum Lv.2",
+   "name": "Spotless Action Figure",
    "quantity": 2
   },
   {
@@ -879,6 +865,20 @@
   },
   {
    "date": "2026-11-25",
+   "group": "Museum",
+   "bin": "Museum Lv.3",
+   "name": "Used Walkboy",
+   "quantity": 4
+  },
+  {
+   "date": "2026-11-26",
+   "group": "Museum",
+   "bin": "Museum Lv.3",
+   "name": "Spotless Techshot",
+   "quantity": 2
+  },
+  {
+   "date": "2026-11-26",
    "group": "Museum",
    "bin": "Museum Lv.3",
    "name": "Used Walkboy",
