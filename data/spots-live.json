@@ -1,5 +1,5 @@
 {
- "generated_at": "2026-11-16T21:21:12+00:00",
+ "generated_at": "2026-11-23T19:33:42+00:00",
  "spots": {
   "abandoned-car": {
    "name": "Abandoned Car",
@@ -119,37 +119,6 @@
    ],
    "guess": [
     "The Hanging Gardens"
-   ]
-  },
-  "battery-totem-repairable": {
-   "name": "Battery Totem (Repairable)",
-   "where": [
-    {
-     "label": "Where to find Battery Totem (Repairable), Gridfall",
-     "count": null
-    },
-    {
-     "label": "Zoom in",
-     "count": null
-    },
-    {
-     "label": "Zoom out",
-     "count": null
-    },
-    {
-     "label": "Show every marker",
-     "count": null
-    }
-   ],
-   "guess": [
-    "The Gridfall"
-   ]
-  },
-  "bench-repairable": {
-   "name": "Bench (Repairable)",
-   "where": [],
-   "guess": [
-    "The Gridfall"
    ]
   },
   "berry-bush": {
@@ -537,13 +506,6 @@
      "count": null
     }
    ],
-   "guess": [
-    "The Gridfall"
-   ]
-  },
-  "launch-pad-repairable": {
-   "name": "Launch Pad (Repairable)",
-   "where": [],
    "guess": [
     "The Gridfall"
    ]
@@ -1333,6 +1295,44 @@
     "Loftia City"
    ]
   },
+  "battery-totem-repairable": {
+   "name": "Battery Totem (Repairable)",
+   "where": [
+    {
+     "label": "Where to find Battery Totem (Repairable), Gridfall",
+     "count": null
+    },
+    {
+     "label": "Zoom in",
+     "count": null
+    },
+    {
+     "label": "Zoom out",
+     "count": null
+    },
+    {
+     "label": "Show every marker",
+     "count": null
+    }
+   ],
+   "guess": [
+    "The Gridfall"
+   ]
+  },
+  "bench-repairable": {
+   "name": "Bench (Repairable)",
+   "where": [],
+   "guess": [
+    "The Gridfall"
+   ]
+  },
+  "launch-pad-repairable": {
+   "name": "Launch Pad (Repairable)",
+   "where": [],
+   "guess": [
+    "The Gridfall"
+   ]
+  },
   "zipline-repairable": {
    "name": "Zipline (Repairable)",
    "where": [
@@ -1358,7 +1358,12 @@
    ]
   }
  },
- "failed": [],
+ "failed": [
+  "battery-totem-repairable",
+  "bench-repairable",
+  "launch-pad-repairable",
+  "zipline-repairable"
+ ],
  "item_spots": {
   "clay": {
    "clay-mound": "lc-claymound-claymound"
